@@ -1220,7 +1220,7 @@ canvas { display: block; }
     if (corruptionLevel > 6) flashNow('#000');
 
     // Auto-advance
-    const delay = Math.max(2000, 6000 - corruptionLevel * 300);
+    const delay = Math.max(3500, 10000 - corruptionLevel * 400);
     if (storyTimer) clearTimeout(storyTimer);
     storyTimer = setTimeout(() => showStoryParagraph(idx + 1), delay);
 
