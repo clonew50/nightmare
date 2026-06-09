@@ -848,26 +848,26 @@ canvas { display: block; }
   ];
 
   const REPLACEMENTS = [
-    {from:/door/gi, to:['mouth','throat','hole','wound','ribcage']},
-    {from:/hall/gi, to:['throat','tunnel','vein','esophagus']},
-    {from:/house/gi, to:['cage','tomb','stomach','body','lung']},
-    {from:/room/gi, to:['stomach','cage','womb','coffin','organ']},
-    {from:/walls?/gi, to:['ribs','skin','bones','flesh','muscle']},
-    {from:/floor\w*/gi, to:['skin','tongue','flesh','palate']},
-    {from:/mirror/gi, to:['eye','mouth','wound','scream']},
-    {from:/dark/gi, to:['alive','watching','hungry','inside me','breathing']},
-    {from:/light/gi, to:['eye','teeth','scream','the void']},
-    {from:/silent/gi, to:['dead','empty','waiting','digesting']},
-    {from:/empty/gi, to:['full of teeth','watching','hungry','alive']},
-    {from:/reflection/gi, to:['it','the other one','my skin','the hunger','my corpse']},
-    {from:/face/gi, to:['my face','its face','the hole','the wound']},
-    {from:/eyes?/gi, to:['holes','mouths','teeth','voids']},
-    {from:/smiling/gi, to:['feeding','eating','stretching','consuming']},
-    {from:/cold/gi, to:['inside me','alive','moving','digesting me']},
-    {from:/hands?/gi, to:['claws','roots','teeth','tendrils']},
-    {from:/skins?/gi, to:['my skin','its skin','my prison']},
-    {from:/know\w*/gi, to:['remember','forget','dream']},
-    {from:/real/gi, to:['a dream','a wound','a lie','hunger']},
+    {from:/\bdoor\b/gi, to:['mouth','throat','hole','wound','ribcage']},
+    {from:/\bhall\b/gi, to:['throat','tunnel','vein','esophagus']},
+    {from:/\bhouse\b/gi, to:['cage','tomb','stomach','body','lung']},
+    {from:/\broom\b/gi, to:['stomach','cage','womb','coffin','organ']},
+    {from:/\bwalls?\b/gi, to:['ribs','skin','bones','flesh','muscle']},
+    {from:/\bfloor\w*\b/gi, to:['skin','tongue','flesh','palate']},
+    {from:/\bmirror\b/gi, to:['eye','mouth','wound','scream']},
+    {from:/\bdark\b/gi, to:['alive','watching','hungry','inside me','breathing']},
+    {from:/\blight\b/gi, to:['eye','teeth','scream','the void']},
+    {from:/\bsilent\b/gi, to:['dead','empty','waiting','digesting']},
+    {from:/\bempty\b/gi, to:['full of teeth','watching','hungry','alive']},
+    {from:/\breflection\b/gi, to:['it','the other one','my skin','the hunger','my corpse']},
+    {from:/\bface\b/gi, to:['my face','its face','the hole','the wound']},
+    {from:/\beyes?\b/gi, to:['holes','mouths','teeth','voids']},
+    {from:/\bsmiling\b/gi, to:['feeding','eating','stretching','consuming']},
+    {from:/\bcold\b/gi, to:['inside me','alive','moving','digesting me']},
+    {from:/\bhands?\b/gi, to:['claws','roots','teeth','tendrils']},
+    {from:/\bskins?\b/gi, to:['my skin','its skin','my prison']},
+    {from:/\bknow\w*\b/gi, to:['remember','forget','dream']},
+    {from:/\breal\b/gi, to:['a dream','a wound','a lie','hunger']},
   ];
 
   const storyOverlay = document.getElementById('story-overlay');
@@ -899,9 +899,9 @@ canvas { display: block; }
         text = text.replace(rule.from, () => rule.to[Math.floor(Math.random()*rule.to.length)]);
       }
     }
-    if (corruptionLevel > 3) {
-      text = text.split('').map(ch => {
-        if (ch.match(/[a-zA-Z]/) && Math.random() < 0.04*(corruptionLevel-2)) {
+    if (corruptionLevel > 5) {
+      text = text.split('').map((ch, i) => {
+        if (ch.match(/[a-zA-Z]/) && Math.random() < 0.015*(corruptionLevel-4)) {
           const c = String.fromCharCode(ch.charCodeAt(0)+(Math.random()>0.5?1:-1));
           return /[a-zA-Z]/.test(c) ? c : ch;
         }
@@ -910,8 +910,8 @@ canvas { display: block; }
     }
     const words = text.split(' ');
     storyText.innerHTML = words.map((w, i) => {
-      if (corruptionLevel > 1 && Math.random() < 0.05*corruptionLevel) return `<span class="glitched">${w}</span>`;
-      if (Math.random() < 0.1*(corruptionLevel+1)) return `<span class="corrupted">${w}</span>`;
+      if (corruptionLevel > 2 && Math.random() < 0.03*corruptionLevel) return `<span class="glitched">${w}</span>`;
+      if (corruptionLevel > 0 && Math.random() < 0.04*(corruptionLevel+1)) return `<span class="corrupted">${w}</span>`;
       return w;
     }).join(' ');
 
