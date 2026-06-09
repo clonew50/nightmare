@@ -2,179 +2,98 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050508">
 <title>you shouldn't be here</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #000;
-  color: #c0c0c0;
-  font-family: 'Times New Roman', serif;
-  overflow: hidden;
-  height: 100vh;
-  width: 100vw;
-  user-select: none;
+  background: #050508; color: #c0b8b0;
+  font-family: 'Times New Roman', 'Georgia', 'Noto Naskh Arabic', 'Amiri', 'Noto Sans SC', 'Noto Sans JP', serif;
+  min-height: 800vh; overflow-x: hidden; position: relative;
+  transition: background-color 1.5s ease, color 1.5s ease;
 }
 canvas { display: block; }
-#three-container {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 0;
-}
-#glitch-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 1;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-#face-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 2;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.02s;
-}
-#face-overlay.active { opacity: 1; }
-#static-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 3;
-  pointer-events: none;
-  opacity: 0;
-}
-#static-overlay.active { opacity: 0.8; }
-#scanlines {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 3;
-  pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.2) 1px, rgba(0,0,0,0.2) 3px);
-}
-#vignette {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 3;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,1) 100%);
-}
-#blood-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 4;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-#blood-overlay.active { opacity: 1; }
-#ui-layer {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 5;
-  pointer-events: none;
-}
-#ui-layer.clickable { pointer-events: auto; }
-#shake-layer {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 90;
-  pointer-events: none;
-}
-#bsod-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 100;
-  pointer-events: none;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #012;
-  color: #aab;
-  font-family: 'Consolas', monospace;
-  padding: 40px;
-}
-#bsod-overlay.active { display: flex; pointer-events: auto; }
-#flash-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh; z-index: 98;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.02s;
-}
-#flash-overlay.active { opacity: 1; }
-.fake-popup {
-  position: absolute;
-  background: #0a0a0f;
-  border: 1px solid #2a2a3a;
-  padding: 20px 30px;
-  max-width: 420px;
-  box-shadow: 0 0 100px rgba(80,0,0,0.3);
-  font-size: 14px;
-  line-height: 1.7;
-  color: #909098;
-  font-family: 'Times New Roman', serif;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 12;
-}
-.fake-popup.danger { border-color: #4a1010; box-shadow: 0 0 100px rgba(120,0,0,0.4); }
-.fake-popup.danger h3 { color: #7a2020; }
-.fake-popup h3 { font-weight: normal; margin-bottom: 12px; font-size: 15px; letter-spacing: 0.1em; color: #7a7a7a; }
-.fake-popup .btn-row { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
-.fake-popup button {
-  background: #16161e; border: 1px solid #3a3a4a; color: #a0a0a0;
-  padding: 6px 18px; font-family: inherit; font-size: 13px; cursor: pointer; transition: 0.1s;
-}
-.fake-popup button:hover { background: #262632; border-color: #5a5a6a; }
-#corner-counter {
-  position: fixed; bottom: 10px; left: 10px;
-  color: rgba(40,40,40,0.08);
-  font-family: monospace; font-size: 10px; z-index: 5;
-  pointer-events: none;
-}
-#story-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 50;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(5,5,8,0.97);
-  padding: 8vh 10vw;
-  pointer-events: auto;
-}
-#story-overlay.active {
-  display: flex;
-}
-#story-text {
-  max-width: 700px;
-  font-size: clamp(16px, 1.6vw, 22px);
-  line-height: 1.9;
-  color: #808080;
-  font-family: 'Times New Roman', serif;
-  transition: color 0.5s;
-  text-align: left;
-}
-#story-text .corrupted {
-  color: #4a2020;
-  text-shadow: 0 0 8px rgba(80,0,0,0.3);
-  transition: all 0.3s;
-}
-#story-text .glitched {
-  letter-spacing: -0.05em;
-  opacity: 0.6;
-  filter: blur(0.5px);
-}
-#story-progress {
-  position: fixed;
-  bottom: 0; left: 0;
-  height: 2px;
-  background: rgba(60,0,0,0.3);
-  z-index: 51;
-  transition: width 0.5s;
-  width: 0%;
-}
-#story-skip {
-  position: fixed; top: 20px; right: 30px;
-  color: rgba(60,60,60,0.2);
-  font-family: monospace; font-size: 12px; z-index: 51;
-  cursor: pointer; pointer-events: auto;
-  letter-spacing: 0.2em;
-}
-#story-skip:hover { color: rgba(100,100,100,0.4); }
+#three-container { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; }
+#glitch-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none; mix-blend-mode:screen; }
+#face-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:2; pointer-events:none; opacity:0; transition:opacity 0.02s; }
+#face-overlay.active { opacity:1; }
+#blood-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:3; pointer-events:none; opacity:0; transition:opacity 0.5s; }
+#blood-overlay.active { opacity:1; }
+#scanlines { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:3; pointer-events:none; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px); }
+#vignette { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:3; pointer-events:none; background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.85) 100%); transition:all 1s; }
+#flash-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:98; pointer-events:none; opacity:0; transition:opacity 0.03s; }
+#flash-overlay.active { opacity:1; }
+#shake-layer { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:90; pointer-events:none; }
+#bsod-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:100; pointer-events:none; display:none; flex-direction:column; align-items:center; justify-content:center; background:#012; color:#aab; font-family:Consolas,monospace; padding:40px; }
+#bsod-overlay.active { display:flex; pointer-events:auto; }
+#static-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:4; pointer-events:none; opacity:0; }
+#static-overlay.active { opacity:0.8; }
+
+/* LANG SWITCHER */
+#langSwitcher { position:fixed; bottom:clamp(70px,15vw,90px); right:clamp(12px,3vw,20px); z-index:50; font-family:'Times New Roman',serif; }
+#langBtn { display:flex; align-items:center; gap:6px; padding:clamp(6px,1.5vw,8px) clamp(10px,2.5vw,14px); background:rgba(10,10,15,0.85); border:1px solid #3a3a4a; border-radius:20px; cursor:pointer; font-family:inherit; font-size:clamp(0.6rem,1.4vw,0.7rem); color:#8b7b7b; letter-spacing:1px; backdrop-filter:blur(6px); transition:all 0.3s; }
+#langBtn:hover { background:rgba(20,20,30,0.9); border-color:#5a5a6a; color:#b0a0a0; }
+#langBtn .arrow { font-size:0.55rem; transition:transform 0.3s; }
+#langBtn.open .arrow { transform:rotate(180deg); }
+#langDropdown { position:absolute; bottom:110%; right:0; background:rgba(15,15,25,0.95); border:1px solid #3a3a4a; border-radius:12px; padding:6px 0; min-width:140px; max-height:280px; overflow-y:auto; opacity:0; pointer-events:none; transform:translateY(8px); transition:all 0.25s; box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+#langDropdown.visible { opacity:1; pointer-events:auto; transform:translateY(0); }
+#langDropdown .lang-option { padding:clamp(6px,1.5vw,8px) clamp(12px,3vw,16px); cursor:pointer; font-family:inherit; font-size:clamp(0.6rem,1.3vw,0.7rem); color:#8b7b7b; transition:all 0.2s; white-space:nowrap; }
+#langDropdown .lang-option:hover, #langDropdown .lang-option.active { background:rgba(60,40,40,0.3); color:#c0a0a0; }
+#langDropdown .lang-option.active { font-weight:bold; }
+
+/* CLINICAL BAR */
+.clinical-bar { position:fixed; top:0; left:0; right:0; z-index:20; display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; padding:8px clamp(12px,3vw,20px); font-size:clamp(0.45rem,1.1vw,0.55rem); color:rgba(120,100,100,0.6); letter-spacing:1.5px; text-transform:uppercase; font-family:'Courier New',monospace; border-bottom:1px solid rgba(60,50,50,0.15); background:rgba(5,5,8,0.7); backdrop-filter:blur(4px); transition:all 0.8s; }
+.clinical-bar span { transition:all 0.6s; white-space:nowrap; }
+
+/* CONTAINER */
+.container { max-width:620px; margin:0 auto; position:relative; z-index:5; padding:clamp(60px,10vw,90px) clamp(16px,5vw,30px) clamp(200px,50vw,400px); }
+
+/* HEADER */
+.header-date { font-size:clamp(0.55rem,1.4vw,0.7rem); color:rgba(120,90,90,0.5); letter-spacing:3px; text-transform:uppercase; margin-bottom:4px; transition:all 0.8s; }
+h1 { font-weight:normal; font-size:clamp(1.4rem,4.5vw,2.2rem); color:rgba(160,140,130,0.6); margin-bottom:clamp(30px,8vw,50px); letter-spacing:2px; transition:all 0.2s; }
+
+/* ENTRIES */
+.entry { margin-bottom:clamp(30px,7vw,50px); line-height:1.9; font-size:clamp(0.85rem,2vw,1rem); color:rgba(160,150,140,0.5); transition:all 0.6s; position:relative; }
+.entry p { margin-bottom:clamp(10px,2.5vw,16px); text-align:justify; transition:all 0.5s; }
+.infected-word { display:inline-block; transition:all 0.3s; cursor:default; }
+.infected-word:hover { color:#8b3030; letter-spacing:2px; text-shadow:0 0 6px rgba(100,20,20,0.3); }
+
+/* DIALOG */
+.system-dialog { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.95); background:#0a0a12; border:1px solid #3a2a2a; padding:clamp(20px,5vw,30px) clamp(24px,6vw,40px); z-index:60; font-family:'Courier New',monospace; text-align:center; opacity:0; pointer-events:none; transition:all 0.3s; box-shadow:0 8px 40px rgba(0,0,0,0.5); max-width:min(380px,90vw); }
+.system-dialog.visible { opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+.system-dialog h4 { font-weight:normal; color:#6b3030; margin-bottom:10px; font-size:clamp(0.7rem,1.8vw,0.85rem); letter-spacing:1px; }
+.system-dialog p { font-size:clamp(0.55rem,1.3vw,0.65rem); color:#7a6a6a; line-height:1.6; }
+.system-dialog .btn { display:inline-block; margin-top:15px; padding:clamp(5px,1.5vw,6px) clamp(16px,4vw,20px); border:1px solid #4a3030; background:transparent; color:#8b4040; font-family:inherit; font-size:clamp(0.55rem,1.2vw,0.65rem); cursor:pointer; transition:all 0.3s; letter-spacing:1px; text-transform:uppercase; }
+.system-dialog .btn:hover { background:#4a3030; color:#0a0a12; }
+
+/* ORBS */
+.orb { position:fixed; pointer-events:none; z-index:15; font-size:clamp(0.5rem,1.3vw,0.6rem); color:rgba(120,60,60,0.6); opacity:0; transition:opacity 4s; white-space:nowrap; text-shadow:0 0 8px rgba(100,30,30,0.3); }
+.orb.rtl { direction:rtl; }
+
+/* FOOTER WHISPER */
+.footer-whisper { position:fixed; bottom:clamp(20px,5vw,30px); left:50%; transform:translateX(-50%); font-size:clamp(0.5rem,1.3vw,0.65rem); color:rgba(120,100,100,0.25); letter-spacing:4px; text-transform:uppercase; z-index:5; opacity:0.5; transition:all 1.5s; pointer-events:none; white-space:nowrap; }
+
+/* DEGRADATION STAGES */
+body.stage-1 { background-color:#050510; }
+body.stage-2 { background-color:#060612; }
+body.stage-3 { background-color:#080815; animation:microShiver 0.6s ease-in-out infinite; }
+body.stage-4 { background-color:#101020; animation:macroShiver 0.35s ease-in-out infinite; }
+body.stage-5 { background-color:#1a0a0a; animation:macroShiver 0.25s ease-in-out infinite; }
+body.stage-6 { background-color:#2a0a0a; color:#b08080; }
+body.stage-7 { background-color:#1a0505; color:#a07070; animation:violentShiver 0.15s ease-in-out infinite; }
+@keyframes microShiver { 0%,100%{transform:translate(0,0)} 25%{transform:translate(0.5px,-0.5px)} 50%{transform:translate(-0.5px,0.4px)} 75%{transform:translate(0.4px,0.5px)} }
+@keyframes macroShiver { 0%,100%{transform:translate(0,0)} 20%{transform:translate(2px,-1.5px)} 40%{transform:translate(-1.5px,2px)} 60%{transform:translate(1.5px,2px)} 80%{transform:translate(-2px,-1px)} }
+@keyframes violentShiver { 0%,100%{transform:translate(0,0)} 15%{transform:translate(4px,-3px)} 35%{transform:translate(-3px,4px)} 55%{transform:translate(3px,4px)} 75%{transform:translate(-4px,-2px)} }
+@media (prefers-reduced-motion:reduce) { body.stage-3,body.stage-4,body.stage-5,body.stage-7{animation:none} }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:clamp(3px,1vw,5px); }
+::-webkit-scrollbar-track { background:#050508; }
+::-webkit-scrollbar-thumb { background:#2a2020; border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:#4a3030; }
+
+::selection { background:#4a2020; color:#c0a0a0; }
 </style>
 </head>
 <body>
@@ -183,18 +102,69 @@ canvas { display: block; }
 <canvas id="glitch-overlay"></canvas>
 <canvas id="face-overlay"></canvas>
 <canvas id="blood-overlay"></canvas>
-<div id="static-overlay"></div>
 <div id="scanlines"></div>
 <div id="vignette"></div>
-<div id="ui-layer"></div>
+<div id="static-overlay"></div>
+<div id="flash-overlay"></div>
 <div id="shake-layer"></div>
 <div id="bsod-overlay"><div id="bsod-text"></div></div>
-<div id="flash-overlay"></div>
-<div id="corner-counter">0</div>
-<div id="story-overlay">
-  <div id="story-text"></div>
-  <div id="story-progress"></div>
-  <div id="story-skip">x</div>
+<div id="orbContainer"></div>
+
+<div id="langSwitcher">
+  <button id="langBtn" onclick="toggleLangDropdown()"><span id="langLabel">EN</span> <span class="arrow">▾</span></button>
+  <div id="langDropdown"></div>
+</div>
+
+<div class="clinical-bar" id="clinicalBar">
+  <span id="scrollPct">SCROLL: 0%</span>
+  <span id="infectedCount">INFECTED: 0</span>
+  <span id="anomalyFlag">ANOMALY: NONE</span>
+  <span id="heartbeat">♡ 72 BPM</span>
+</div>
+
+<div class="system-dialog" id="systemDialog">
+  <h4 id="dialogTitle">system alert</h4>
+  <p id="dialogBody">unexpected memory access</p>
+  <button class="btn" id="dialogBtn" onclick="dismissDialog()">acknowledge</button>
+</div>
+
+<div class="container">
+
+  <div class="header-date" id="headerDate">you are here now</div>
+  <h1 id="mainTitle">it watches from the dark</h1>
+
+  <div class="entry" id="entry1">
+    <p>The house was silent when I arrived. The kind of silence that presses against your ears until you hear your own blood <span class="infected-word" data-original="moving">moving</span>.</p>
+    <p>The <span class="infected-word" data-original="door">door</span> at the end of the <span class="infected-word" data-original="hall">hall</span> was slightly open. I could see nothing through the gap, but I <span class="infected-word" data-original="felt">felt</span> something looking back.</p>
+  </div>
+
+  <div class="entry" id="entry2">
+    <p>I called out. No one answered. The <span class="infected-word" data-original="floorboards">floorboards</span> groaned under my weight, and I could have sworn they <span class="infected-word" data-original="moved">moved</span> slightly with each step.</p>
+    <p>The <span class="infected-word" data-original="walls">walls</span> were covered in old wallpaper, yellowed and peeling. Some of the patterns seemed to <span class="infected-word" data-original="shift">shift</span> when I wasn't looking directly at them.</p>
+  </div>
+
+  <div class="entry" id="entry3">
+    <p>I reached the door and pushed it open. The <span class="infected-word" data-original="room">room</span> beyond was empty except for a single chair in the center, facing away from <span class="infected-word" data-original="me">me</span>.</p>
+    <p>There was a <span class="infected-word" data-original="mirror">mirror</span> on the far wall. In the dim <span class="infected-word" data-original="light">light</span>, I could see my reflection. But it was <span class="infected-word" data-original="smiling">smiling</span>. I was not smiling.</p>
+  </div>
+
+  <div class="entry" id="entry4">
+    <p>I tried to leave, but the <span class="infected-word" data-original="door">door</span> behind me had vanished. The <span class="infected-word" data-original="walls">walls</span> were closer now. The <span class="infected-word" data-original="ceiling">ceiling</span> lower.</p>
+    <p>The <span class="infected-word" data-original="reflection">reflection</span> stepped out of the mirror. It walked towards me with my <span class="infected-word" data-original="face">face</span> but not my eyes. Its <span class="infected-word" data-original="mouth">mouth</span> opened wider than a mouth should open.</p>
+  </div>
+
+  <div class="entry" id="entry5">
+    <p>It spoke in my voice. <em>Thank you for <span class="infected-word" data-original="letting">letting</span> me in. I've been waiting so long to <span class="infected-word" data-original="wear">wear</span> you again.</em></p>
+    <p>The <span class="infected-word" data-original="lights">lights</span> went out. I felt its <span class="infected-word" data-original="hands">hands</span> on my skin, <span class="infected-word" data-original="cold">cold</span> and familiar. And then I <span class="infected-word" data-original="remembered">remembered</span>. I remembered everything.</p>
+  </div>
+
+  <div class="entry" id="entry6">
+    <p>There never was a <span class="infected-word" data-original="house">house</span>. There never was a <span class="infected-word" data-original="door">door</span>. There was only the <span class="infected-word" data-original="dark">dark</span>, and I have always been here, and I will never <span class="infected-word" data-original="leave">leave</span>.</p>
+    <p style="margin-top:40px; font-style:italic; color:rgba(120,60,60,0.3);">Turn around.</p>
+  </div>
+
+  <div class="footer-whisper" id="footerWhisper">keep scrolling</div>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -202,1082 +172,497 @@ canvas { display: block; }
 (function() {
   'use strict';
 
-  /* ========== STATE ========== */
-  let AC = null, audioReady = false;
-  let clicks = 0, keys = 0, moves = 0, scares = 0;
-  let idleSec = 0, idleTimer = null, lastAction = Date.now();
-  let scareCD = 0, fearLevel = 0;
-  let bsodActive = false;
-
-  const NIGHTMARES = [
-    "it's right behind you", "you are being watched", "don't turn around",
-    "it can smell your fear", "your reflection is smiling", "it's in the room with you",
-    "you let it in", "it wears your face", "it knows your name",
-    "there's someone in your house", "it's been following you for days",
-    "your eyes are next", "it feeds on fear", "the exit is gone",
-    "you've been dead for hours", "it's learning your voice"
-  ];
-
-  /* ========== CANVAS HELPERS ========== */
-  const faceCanvas = document.getElementById('face-overlay');
-  const faceCtx = faceCanvas.getContext('2d');
-  const bloodCanvas = document.getElementById('blood-overlay');
-  const bloodCtx = bloodCanvas.getContext('2d');
-
-  function resizeAll() {
-    faceCanvas.width = bloodCanvas.width = window.innerWidth;
-    faceCanvas.height = bloodCanvas.height = window.innerHeight;
-  }
-  resizeAll();
-  window.addEventListener('resize', resizeAll);
-
-  /* --- DRAW DISTORTED FACE (max horror) --- */
-  function drawFace(w, h, intensity) {
-    faceCtx.clearRect(0, 0, w, h);
-    faceCtx.fillStyle = '#000';
-    faceCtx.fillRect(0, 0, w, h);
-
-    const cx = w/2, cy = h/2;
-    const s = Math.min(w, h) * 0.45;
-
-    faceCtx.save();
-    faceCtx.translate(cx, cy);
-
-    // Head
-    faceCtx.beginPath();
-    faceCtx.ellipse(0, 0, s*1.2, s*1.5, 0, 0, Math.PI*2);
-    faceCtx.fillStyle = '#14141e';
-    faceCtx.fill();
-
-    // Eye sockets
-    for (let side = -1; side <= 1; side += 2) {
-      faceCtx.beginPath();
-      faceCtx.ellipse(side*s*0.45, -s*0.25, s*0.25, s*0.32, 0, 0, Math.PI*2);
-      faceCtx.fillStyle = '#050505';
-      faceCtx.fill();
-      // Glowing pupils
-      faceCtx.beginPath();
-      faceCtx.arc(side*s*0.45 + side*s*0.06, -s*0.22 + s*0.03, s*0.1, 0, Math.PI*2);
-      faceCtx.fillStyle = `rgba(180,180,180,${0.6 + Math.random()*0.4})`;
-      faceCtx.fill();
-      // Red veins
-      faceCtx.strokeStyle = '#3a0a0a';
-      faceCtx.lineWidth = 1.5;
-      for (let v = 0; v < 8; v++) {
-        const ang = Math.random() * Math.PI * 2;
-        const len = s * 0.2 + Math.random() * s * 0.3;
-        faceCtx.beginPath();
-        faceCtx.moveTo(side*s*0.45, -s*0.25);
-        faceCtx.quadraticCurveTo(
-          side*s*0.45 + Math.cos(ang)*len*0.5 + (Math.random()-0.5)*s*0.2,
-          -s*0.25 + Math.sin(ang)*len*0.5 + (Math.random()-0.5)*s*0.2,
-          side*s*0.45 + Math.cos(ang)*len,
-          -s*0.25 + Math.sin(ang)*len
-        );
-        faceCtx.stroke();
-      }
+  /* ========== LANGUAGE PACKS ========== */
+  const LANGUAGES = {
+    en: {
+      code:'en', name:'English', native:'English', rtl:false,
+      orbMessages:["don't turn around","i can see you","you've been here before","the breathing stopped","check the mirror","it remembers","you look tired","keep scrolling","almost there","they're waiting","your reflection is slow","3:14 AM","the buzzing stopped","why did you come back","it knows your name","you blinked","i copied you","the closet is open"],
+      dialogMessages:[
+        {title:'connection unstable',body:'packet loss at 34%. retransmission failed. peer may be observing.'},
+        {title:'memory corruption',body:'unexpected value at address 0x7fff4e2b. possible bit rot.'},
+        {title:'session conflict',body:'another instance detected. two observers cannot occupy the same page.'},
+        {title:'time desync',body:'system clock diverged by 14 minutes. local time may be incorrect.'},
+        {title:'peripheral access',body:'a process requested camera access. request denied. request retrying.'}
+      ],
+      infectionDict:{
+        'moving':['bleeding','crawling','screaming','dying','feeding'],
+        'door':['mouth','throat','hole','wound','ribcage'],
+        'hall':['throat','tunnel','vein','esophagus'],
+        'felt':['knew','heard','smelled','tasted','became'],
+        'floorboards':['bones','teeth','ribs','fingers','tombstones'],
+        'moved':['breathed','pulsed','ached','bled','waited'],
+        'walls':['ribs','skin','flesh','bones','teeth'],
+        'shift':['breathe','look','hunger','remember','watch'],
+        'room':['stomach','cage','womb','coffin','mouth'],
+        'me':['you','them','it','no one','everyone'],
+        'mirror':['eye','wound','mouth','window','skin'],
+        'light':['eye','teeth','scream','burning','hunger'],
+        'smiling':['feeding','eating','stretching','waiting','remembering'],
+        'ceiling':['skull','lid','roof of my mouth'],
+        'reflection':['replacement','visitor','twin','stranger','original','hunger'],
+        'face':['my face','its face','the hole','the mask','the wound'],
+        'mouth':['wound','opening','entrance','hunger'],
+        'letting':['trapping','inviting','feeding','summoning'],
+        'wear':['eat','become','fill','consume','wear'],
+        'lights':['eyes','teeth','stars','screams'],
+        'hands':['claws','roots','teeth','fingers','wings'],
+        'cold':['inside me','alive','moving','hungry','familiar'],
+        'remembered':['saw','became','understood','joined','woke'],
+        'house':['cage','tomb','stomach','body','mouth'],
+        'dark':['alive','watching','hungry','inside me','waiting','ancient'],
+        'leave':['escape','wake','die','forget','survive']
+      },
+      footerStages:['keep scrolling','keep going','don\'t stop','almost there','it sees you','it\'s behind you','turn around'],
+      titleStages:['it watches from the dark','something is wrong','you are not alone','the door is gone','it has your face','too late to leave','it remembers everything'],
+      pageTitles:['you shouldn\'t be here','keep reading','don\'t stop','don\'t turn around','i can see you','behind you','DON\'T LOOK'],
+      clinicalAnomaly:['ANOMALY: NONE','ANOMALY: TRACE','ANOMALY: PRESENT','ANOMALY: SEVERE','ANOMALY: CRITICAL','ANOMALY: CONTAINMENT FAILURE'],
+      dialogAck:'acknowledge',
+      idleTitles:['are you still there?','hello?','you left me','you stopped scrolling'],
+      contextNotes:['not an option here','it already knows',"you can't inspect this away"]
+    },
+    ar:{
+      code:'ar', name:'Arabic', native:'العربية', rtl:true,
+      orbMessages:['لا تنظر خلفك','أنا أراك','لقد كنت هنا من قبل','توقف التنفس','تفقد المرآة','إنه يتذكر','تبدو متعباً','استمر في التمرير','أوشكت على الوصول','إنهم ينتظرون','انعكاسك بطيء','الثالثة و14 دقيقة صباحاً','توقف الطنين','لماذا عدت','إنه يعرف اسمك','رمشت','لقد قلّدتك','الخزانة مفتوحة'],
+      dialogMessages:[
+        {title:'الاتصال غير مستقر',body:'فقدان الحزم بنسبة 34%. فشلت إعادة الإرسال. قد يكون هناك من يراقب.'},
+        {title:'تلف الذاكرة',body:'قيمة غير متوقعة في العنوان 0x7fff4e2b. تلف محتمل.'},
+        {title:'تعارض الجلسة',body:'تم اكتشاف نسخة أخرى. لا يمكن لمراقبَين احتلال الصفحة نفسها.'},
+        {title:'عدم تزامن الوقت',body:'انحرفت ساعة النظام بمقدار 14 دقيقة. قد يكون التوقيت المحلي غير صحيح.'},
+        {title:'وصول طرفي',body:'طلب عملية الوصول إلى الكاميرا. تم رفض الطلب. إعادة المحاولة.'}
+      ],
+      infectionDict:{
+        'moving':['ينزف','يزحف','يصرخ','يموت','يتغذى'],
+        'door':['فم','حلق','جرح','قفص صدري'],
+        'hall':['حلق','نفق','وريد','مريء'],
+        'felt':['عرف','سمع','شم','تذوق','أصبح'],
+        'floorboards':['عظام','أسنان','أضلاع','أصابع','شواهد قبور'],
+        'moved':['تنفس','نبض','ألم','نزف','انتظر'],
+        'walls':['أضلاع','جلد','لحم','عظام','أسنان'],
+        'shift':['تتنفس','تنظر','تجوع','تتذكر','تراقب'],
+        'room':['معدة','قفص','رحم','تابوت','فم'],
+        'me':['أنت','هم','هو','لا أحد','الجميع'],
+        'mirror':['عين','جرح','فم','نافذة','جلد'],
+        'light':['عين','أسنان','صراخ','حرق','جوع'],
+        'smiling':['يتغذى','يأكل','يتمدد','ينتظر','يتذكر'],
+        'ceiling':['جمجمة','غطاء','سقف فمي'],
+        'reflection':['بديل','زائر','توأم','غريب','أصلي','جوع'],
+        'face':['وجهي','وجهه','الحفرة','القناع','الجرح'],
+        'mouth':['جرح','فتحة','مدخل','جوع'],
+        'letting':['يحبس','يدعو','يغذي','يستحضر'],
+        'wear':['يأكل','يصبح','يملأ','يلتهم','يرتدي'],
+        'lights':['عيون','أسنان','نجوم','صرخات'],
+        'hands':['مخالب','جذور','أسنان','أصابع','أجنحة'],
+        'cold':['بداخلي','حي','يتحرك','جائع','مألوف'],
+        'remembered':['رأى','أصبح','فهم','انضم','استيقظ'],
+        'house':['قفص','قبر','معدة','جسم','فم'],
+        'dark':['حي','يراقب','جائع','بداخلي','ينتظر','قديم'],
+        'leave':['يهرب','يستيقظ','يموت','ينسى','ينجو']
+      },
+      footerStages:['استمر في التمرير','استمر','لا تتوقف','أوشكت','إنه يراك','إنه خلفك','استدر'],
+      titleStages:['إنه يراقب من الظلام','شيء ما خطأ','أنت لست وحدك','الباب اختفى','إنه يحمل وجهك','فات الأوان للرحيل','إنه يتذكر كل شيء'],
+      pageTitles:['لا ينبغي أن تكون هنا','استمر في القراءة','لا تتوقف','لا تستدر','أنا أراك','خلفك','لا تنظر'],
+      clinicalAnomaly:['شذوذ: لا شيء','شذوذ: أثر','شذوذ: موجود','شذوذ: شديد','شذوذ: خطر','شذوذ: فشل الاحتواء'],
+      dialogAck:'إقرار',
+      idleTitles:['هل ما زلت هناك؟','مرحباً؟','تركتني','توقفت عن التمرير'],
+      contextNotes:['ليس خياراً هنا','إنه يعرف بالفعل','لا يمكنك فحص هذا']
     }
+  };
 
-    // Nose hole
-    faceCtx.beginPath();
-    faceCtx.ellipse(0, s*0.05, s*0.06, s*0.14, 0, 0, Math.PI*2);
-    faceCtx.fillStyle = '#000';
-    faceCtx.fill();
+  let currentLang = 'en';
+  let scrollFraction = 0;
+  let sessionDegradation = 0;
+  let infectedCount = 0;
+  let audioCtx = null;
+  let isScrolledToBottom = false;
+  let monsterTriggered = false;
+  let orbTimer = 0;
+  let idleTimer = 0;
+  let isIdle = false;
+  let heartRate = 72;
+  let lastHeartUpdate = Date.now();
 
-    // Mouth - massive wide grin
-    const mouthY = s*0.4;
-    faceCtx.beginPath();
-    faceCtx.ellipse(0, mouthY, s*0.65, s*0.18, 0, 0, Math.PI);
-    faceCtx.strokeStyle = '#1a1a1a';
-    faceCtx.lineWidth = 4;
-    faceCtx.stroke();
-
-    // Teeth
-    for (let t = -6; t <= 6; t++) {
-      const tx = t * s*0.07;
-      faceCtx.fillStyle = '#d0d0d0';
-      const tw = s*0.04, th = s*0.07 + Math.sin(t*1.5) * s*0.02;
-      faceCtx.fillRect(tx - tw/2, mouthY - th, tw, th);
-      faceCtx.strokeStyle = '#333';
-      faceCtx.lineWidth = 0.5;
-      faceCtx.strokeRect(tx - tw/2, mouthY - th, tw, th);
-    }
-    // Bottom teeth
-    for (let t = -5; t <= 5; t++) {
-      const tx = t * s*0.07;
-      faceCtx.fillStyle = '#c8c8c8';
-      const tw = s*0.035, th = s*0.05;
-      faceCtx.fillRect(tx - tw/2, mouthY + 2, tw, th);
-      faceCtx.strokeStyle = '#333';
-      faceCtx.lineWidth = 0.5;
-      faceCtx.strokeRect(tx - tw/2, mouthY + 2, tw, th);
-    }
-
-    // Distortion glitch slices
-    for (let d = 0; d < 30; d++) {
-      const dx = (Math.random()-0.5)*s*2.6;
-      const dy = (Math.random()-0.5)*s*3;
-      const dw = Math.random()*s*0.4 + s*0.05;
-      const dh = Math.random()*6 + 2;
-      faceCtx.fillStyle = `rgba(0,0,0,${Math.random()*0.7})`;
-      faceCtx.fillRect(dx, dy, dw, dh);
-    }
-
-    // Blood drip
-    if (intensity > 1) {
-      for (let d = 0; d < 12; d++) {
-        const bx = (Math.random()-0.5)*s*2;
-        const by = s*0.3 + Math.random()*s*0.8;
-        faceCtx.fillStyle = `rgba(80,0,0,${0.3+Math.random()*0.4})`;
-        faceCtx.beginPath();
-        faceCtx.ellipse(bx, by, 2+Math.random()*4, 3+Math.random()*12, 0, 0, Math.PI*2);
-        faceCtx.fill();
-      }
-    }
-
-    faceCtx.restore();
+  /* ========== LANG HELPERS ========== */
+  function t(key, subKey) {
+    const lang = LANGUAGES[currentLang] || LANGUAGES.en;
+    if (subKey !== undefined && Array.isArray(lang[key])) return lang[key][subKey] !== undefined ? lang[key][subKey] : (LANGUAGES.en[key]?.[subKey] !== undefined ? LANGUAGES.en[key][subKey] : key);
+    return lang[key] !== undefined ? lang[key] : (LANGUAGES.en[key] !== undefined ? LANGUAGES.en[key] : key);
   }
 
-  /* --- DRAW FIGURE --- */
-  function drawFigure(w, h) {
-    faceCtx.clearRect(0, 0, w, h);
-    faceCtx.fillStyle = '#000';
-    faceCtx.fillRect(0, 0, w, h);
-
-    const cx = w/2, cy = h/2 + h*0.1;
-    const s = Math.min(w, h) * 0.35;
-
-    // Tall thin figure
-    faceCtx.fillStyle = '#08080a';
-    faceCtx.beginPath();
-    faceCtx.moveTo(cx - s*0.35, cy + s*0.9);
-    faceCtx.lineTo(cx - s*0.55, cy - s*0.3);
-    faceCtx.quadraticCurveTo(cx, cy - s*1.5, cx + s*0.55, cy - s*0.3);
-    faceCtx.lineTo(cx + s*0.35, cy + s*0.9);
-    faceCtx.closePath();
-    faceCtx.fill();
-
-    // Head
-    faceCtx.beginPath();
-    faceCtx.ellipse(cx, cy - s*0.8, s*0.28, s*0.35, 0, 0, Math.PI*2);
-    faceCtx.fill();
-
-    // Hollow eyes
-    faceCtx.fillStyle = '#000';
-    faceCtx.beginPath();
-    faceCtx.ellipse(cx - s*0.12, cy - s*0.85, s*0.06, s*0.09, 0, 0, Math.PI*2);
-    faceCtx.fill();
-    faceCtx.beginPath();
-    faceCtx.ellipse(cx + s*0.12, cy - s*0.85, s*0.06, s*0.09, 0, 0, Math.PI*2);
-    faceCtx.fill();
-
-    // Mouth (O shape)
-    faceCtx.beginPath();
-    faceCtx.ellipse(cx, cy - s*0.65, s*0.04, s*0.07, 0, 0, Math.PI*2);
-    faceCtx.fill();
-
-    // Arms reaching
-    faceCtx.strokeStyle = '#08080a';
-    faceCtx.lineWidth = s*0.15;
-    faceCtx.lineCap = 'round';
-    faceCtx.beginPath();
-    faceCtx.moveTo(cx - s*0.5, cy - s*0.2);
-    faceCtx.quadraticCurveTo(cx - s*1.1, cy + s*0.5, cx - s*0.9, cy + s*0.3);
-    faceCtx.stroke();
-    faceCtx.beginPath();
-    faceCtx.moveTo(cx + s*0.5, cy - s*0.2);
-    faceCtx.quadraticCurveTo(cx + s*1.1, cy + s*0.5, cx + s*0.9, cy + s*0.3);
-    faceCtx.stroke();
-
-    // Glitch overlay
-    for (let d = 0; d < 25; d++) {
-      faceCtx.fillStyle = `rgba(255,255,255,${Math.random()*0.04})`;
-      faceCtx.fillRect(Math.random()*w, Math.random()*h, Math.random()*200+30, Math.random()*3+1);
-    }
+  function toggleLangDropdown() {
+    document.getElementById('langDropdown').classList.toggle('visible');
+    document.getElementById('langBtn').classList.toggle('open');
   }
 
-  /* --- DRAW BLOOD STREAKS --- */
-  let bloodDrips = [];
-
-  function addBlood() {
-    const w = bloodCanvas.width, h = bloodCanvas.height;
-    bloodCtx.clearRect(0, 0, w, h);
-    for (let i = 0; i < 20 + scares * 3; i++) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const len = 20 + Math.random() * 80;
-      const thick = 2 + Math.random() * 6;
-      bloodCtx.strokeStyle = `rgba(80,0,0,${0.2+Math.random()*0.3})`;
-      bloodCtx.lineWidth = thick;
-      bloodCtx.lineCap = 'round';
-      bloodCtx.beginPath();
-      bloodCtx.moveTo(x, y);
-      bloodCtx.quadraticCurveTo(x + (Math.random()-0.5)*20, y + len*0.5, x + (Math.random()-0.5)*15, y + len);
-      bloodCtx.stroke();
-      // Drip blob at end
-      bloodCtx.beginPath();
-      bloodCtx.arc(x + (Math.random()-0.5)*15, y + len, thick*0.8, 0, Math.PI*2);
-      bloodCtx.fill();
-    }
+  function setLanguage(code) {
+    if (!LANGUAGES[code]) return;
+    currentLang = code;
+    try { sessionStorage.setItem('nightmare_lang', code); } catch(e) {}
+    document.getElementById('langLabel').textContent = code.toUpperCase();
+    document.documentElement.lang = LANGUAGES[code].code;
+    if (LANGUAGES[code].rtl) { document.body.style.direction = 'rtl'; }
+    else { document.body.style.direction = 'ltr'; }
+    buildLangDropdown();
+    dialogBtn.textContent = t('dialogAck');
+    applyDegradation();
   }
 
-  /* ========== JUMPSCARES ========== */
-  function trigger(type) {
-    if (scareCD > Date.now()) return;
-    scareCD = Date.now() + 3000;
-    scares++; fearLevel = Math.min(fearLevel + 1, 30);
-
-    const w = faceCanvas.width, h = faceCanvas.height;
-    flashNow(Math.random() > 0.3 ? '#fff' : '#800');
-
-    if (!type || type === 'face') drawFace(w, h, fearLevel);
-    else if (type === 'figure') drawFigure(w, h);
-    else if (type === 'staticjump') {
-      faceCtx.clearRect(0, 0, w, h);
-      for (let i = 0; i < 500; i++) {
-        faceCtx.fillStyle = `rgba(255,255,255,${Math.random()*0.3})`;
-        faceCtx.fillRect(Math.random()*w, Math.random()*h, Math.random()*50+5, Math.random()*3+1);
-      }
-    }
-    faceCanvas.classList.add('active');
-    screenShake(6 + fearLevel);
-    playScareSound(type);
-
-    if (Math.random() > 0.4) {
-      document.getElementById('blood-overlay').classList.add('active');
-      addBlood();
-      setTimeout(() => document.getElementById('blood-overlay').classList.remove('active'), 3000);
-    }
-
-    if (scares > 3 && Math.random() > 0.5) {
-      showStatic(800);
-    }
-
-    setTimeout(() => faceCanvas.classList.remove('active'), 150 + Math.random()*100);
-  }
-
-  function showStatic(dur) {
-    const el = document.getElementById('static-overlay');
-    el.style.background = `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(#n)" opacity="0.8"/></svg>')`;
-    el.classList.add('active');
-    setTimeout(() => el.classList.remove('active'), dur || 500);
-  }
-
-  let currentFlash = null;
-
-  function flashNow(color) {
-    const el = document.getElementById('flash-overlay');
-    el.style.background = color || '#fff';
-    el.classList.add('active');
-    if (currentFlash) clearTimeout(currentFlash);
-    currentFlash = setTimeout(() => {
-      el.classList.remove('active');
-      currentFlash = null;
-    }, 50 + Math.random()*80);
-  }
-
-  /* ========== SCREEN SHAKE ========== */
-  const shakeEl = document.getElementById('shake-layer');
-
-  function screenShake(intensity) {
-    let count = 0;
-    const max = Math.min(intensity * 2, 30);
-    const interval = setInterval(() => {
-      const x = (Math.random()-0.5)*intensity*3;
-      const y = (Math.random()-0.5)*intensity*3;
-      shakeEl.style.transform = `translate(${x}px,${y}px)`;
-      if (count++ > max) {
-        clearInterval(interval);
-        shakeEl.style.transform = 'translate(0,0)';
-        if (Math.random() > 0.7 && intensity > 8) {
-          // Residual shake
-          setTimeout(() => screenShake(intensity*0.3), 200);
-        }
-      }
-    }, 25);
-  }
-
-  /* ========== AUDIO ========== */
-  function initAudio() {
-    if (AC) return;
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Dual infrasound
-    [19, 33, 47].forEach((freq, i) => {
-      const o = AC.createOscillator();
-      o.type = i === 1 ? 'triangle' : 'sine';
-      o.frequency.value = freq;
-      const g = AC.createGain();
-      g.gain.setValueAtTime(0, AC.currentTime);
-      g.gain.linearRampToValueAtTime(0.12 - i*0.03, AC.currentTime + 6);
-      const f = AC.createBiquadFilter();
-      f.type = 'lowpass';
-      f.frequency.value = 90 + i*20;
-      o.connect(f); f.connect(g); g.connect(AC.destination);
-      o.start();
-    });
-
-    // Noise floor
-    const nb = AC.createBuffer(1, AC.sampleRate*4, AC.sampleRate);
-    const nd = nb.getChannelData(0);
-    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random()*2-1)*0.015;
-    const ns = AC.createBufferSource();
-    ns.buffer = nb; ns.loop = true;
-    const ng = AC.createGain();
-    ng.gain.setValueAtTime(0, AC.currentTime);
-    ng.gain.linearRampToValueAtTime(0.06, AC.currentTime + 8);
-    const nf = AC.createBiquadFilter();
-    nf.type = 'lowpass'; nf.frequency.value = 600;
-    ns.connect(nf); nf.connect(ng); ng.connect(AC.destination);
-    ns.start();
-
-    // Corrupted lullaby loop
-    scheduleLullaby();
-
-    // Random stings
-    scheduleSting();
-
-    audioReady = true;
-  }
-
-  function scheduleLullaby() {
-    if (!AC) return;
-    setTimeout(() => {
-      if (!AC) return;
-      try {
-        const notes = [262, 294, 330, 349, 392, 349, 330, 294];
-        const corrupted = notes.map(n => n + (Math.random()-0.5)*80);
-        corrupted.forEach((freq, i) => {
-          const o = AC.createOscillator();
-          o.type = i % 2 === 0 ? 'sine' : 'square';
-          o.frequency.value = freq;
-          const g = AC.createGain();
-          g.gain.setValueAtTime(0, AC.currentTime + i*0.4);
-          g.gain.linearRampToValueAtTime(0.04, AC.currentTime + i*0.4 + 0.05);
-          g.gain.linearRampToValueAtTime(0, AC.currentTime + i*0.4 + 0.35);
-          o.connect(g); g.connect(AC.destination);
-          o.start(AC.currentTime + i*0.4);
-          o.stop(AC.currentTime + i*0.4 + 0.4);
-        });
-      } catch(e) {}
-      if (fearLevel < 15) scheduleLullaby();
-    }, 8000 + Math.random()*12000);
-  }
-
-  function scheduleSting() {
-    if (!AC) return;
-    setTimeout(() => {
-      if (!AC) return;
-      try {
-        const dur = 0.08 + Math.random()*0.15;
-        const b = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
-        const d = b.getChannelData(0);
-        const freq = 100 + Math.random()*2000;
-        for (let i = 0; i < d.length; i++) {
-          const t = i/AC.sampleRate;
-          d[i] = Math.sin(2*Math.PI*freq*t)*Math.exp(-t*20)*0.3;
-          d[i] += (Math.random()*2-1)*0.2*Math.exp(-t*10);
-          d[i] = Math.tanh(d[i]*4)/4;
-        }
-        const s = AC.createBufferSource();
-        s.buffer = b;
-        const g = AC.createGain();
-        g.gain.value = 0.2 + Math.random()*0.3;
-        const dist = AC.createWaveShaper();
-        const curve = new Float32Array(256);
-        for (let i = 0; i < 256; i++) curve[i] = ((Math.PI+200)*((i*2)/256-1))/(Math.PI+200*Math.abs((i*2)/256-1));
-        dist.curve = curve;
-        s.connect(dist); dist.connect(g); g.connect(AC.destination);
-        s.start();
-      } catch(e) {}
-      scheduleSting();
-    }, 4000 + Math.random()*12000);
-  }
-
-  function playScareSound(type) {
-    if (!AC) return;
-    try {
-      const voices = [
-        { f: 50, d: 0.6, v: 0.9 },
-        { f: 120, d: 0.4, v: 1.0 },
-        { f: 800, d: 0.2, v: 0.7 },
-        { f: 40, d: 0.8, v: 0.8 },
-        { f: 3000, d: 0.15, v: 0.5 },
-      ];
-      const v = voices[Math.floor(Math.random()*voices.length)];
-      const dur = v.d;
-      const b = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
-      const d = b.getChannelData(0);
-      for (let i = 0; i < d.length; i++) {
-        const t = i/AC.sampleRate;
-        d[i] = Math.sin(2*Math.PI*v.f*t)*Math.exp(-t*8)*v.v;
-        d[i] += (Math.random()*2-1)*v.v*0.5*Math.exp(-t*4);
-        d[i] += Math.sin(2*Math.PI*v.f*1.5*t)*Math.exp(-t*10)*v.v*0.3;
-        d[i] = Math.tanh(d[i]*5)/5;
-      }
-      const s = AC.createBufferSource();
-      s.buffer = b;
-      const g = AC.createGain();
-      g.gain.value = 0.9;
-      const dist = AC.createWaveShaper();
-      const curve = new Float32Array(256);
-      for (let i = 0; i < 256; i++) curve[i] = ((Math.PI+400)*((i*2)/256-1))/(Math.PI+400*Math.abs((i*2)/256-1));
-      dist.curve = curve;
-      s.connect(dist); dist.connect(g); g.connect(AC.destination);
-      s.start();
-    } catch(e) {}
-  }
-
-  /* ========== SPEECH SYNTH ========== */
-  function whisper(text) {
-    if (!window.speechSynthesis) return;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.4 + Math.random()*0.2;
-      u.pitch = 0.3 + Math.random()*0.4;
-      u.volume = 0.3 + Math.random()*0.2;
-      u.lang = 'en-US';
-      const voices = speechSynthesis.getVoices();
-      if (voices.length) u.voice = voices[Math.floor(Math.random()*voices.length)];
-      speechSynthesis.speak(u);
-    } catch(e) {}
-  }
-
-  /* ========== POPUP ========== */
-  const uiLayer = document.getElementById('ui-layer');
-
-  function popup(opts) {
-    const old = document.querySelector('.fake-popup');
-    if (old) old.remove();
-    const p = document.createElement('div');
-    p.className = 'fake-popup' + (opts.danger ? ' danger' : '');
-    p.innerHTML = `<h3>${opts.t||'system'}</h3><p>${opts.b||'...'}</p><div class="btn-row"><button class="pb">${opts.btn||'ok'}</button></div>`;
-    uiLayer.classList.add('clickable');
-    uiLayer.appendChild(p);
-    const btn = p.querySelector('.pb');
-    btn.addEventListener('click', () => {
-      p.remove();
-      uiLayer.classList.remove('clickable');
-      if (opts.cb) opts.cb();
-    });
-    btn.addEventListener('mouseenter', () => {
-      if (Math.random() > 0.3) return;
-      const row = p.querySelector('.btn-row');
-      const e = document.createElement('button');
-      e.className = 'pb';
-      e.textContent = 'run';
-      e.addEventListener('click', () => {
-        p.remove(); uiLayer.classList.remove('clickable');
-        if (opts.cb) opts.cb();
-      });
-      btn.textContent = 'hide';
-      row.prepend(e);
+  function buildLangDropdown() {
+    const dd = document.getElementById('langDropdown'); dd.innerHTML = '';
+    Object.keys(LANGUAGES).forEach(code => {
+      const opt = document.createElement('div');
+      opt.className = 'lang-option' + (code === currentLang ? ' active' : '');
+      opt.textContent = LANGUAGES[code].native + ' (' + LANGUAGES[code].name + ')';
+      opt.addEventListener('click', () => setLanguage(code));
+      dd.appendChild(opt);
     });
   }
 
-  /* ========== BSOD ========== */
-  function bsod() {
-    if (bsodActive) return;
-    bsodActive = true;
-    const el = document.getElementById('bsod-overlay');
-    const t = document.getElementById('bsod-text');
-    const msgs = [
-      'SYSTEM FAILURE: IT GOT IN',
-      'FATAL_ERROR: 0xDEADFACE',
-      'CRITICAL_PROCESS_DIED',
-      'YOUR_SYSTEM_IS_COMPROMISED',
-      'KERNEL_SECURITY_CHECK_FAILURE',
-    ];
-    t.innerHTML = `<div style="font-size:28px;margin-bottom:20px;color:#ccd">😐</div>
-<div style="font-size:22px;margin-bottom:30px;color:#dde">${msgs[Math.floor(Math.random()*msgs.length)]}</div>
-<div style="font-size:13px;line-height:1.8;color:#99a">
-  what you're seeing isn't real.<br>
-  your system is fine.<br>
-  but something else is in here with you.<br><br>
-  press any key to continue facing it.
-</div>`;
-    el.classList.add('active');
-    screenShake(10);
-    playScareSound('noise');
-    flashNow('#88aaff');
-    document.addEventListener('keydown', () => {
-      el.classList.remove('active');
-      bsodActive = false;
-      trigger('face');
-    }, { once: true });
-    document.addEventListener('click', () => {
-      el.classList.remove('active');
-      bsodActive = false;
-      trigger('face');
-    }, { once: true });
-  }
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('langSwitcher').contains(e.target)) {
+      document.getElementById('langDropdown').classList.remove('visible');
+      document.getElementById('langBtn').classList.remove('open');
+    }
+  });
 
-  /* ========== THREE.JS — ENHANCED ========== */
-  (function() {
+  /* Load saved language */
+  try {
+    const saved = sessionStorage.getItem('nightmare_lang');
+    if (saved && LANGUAGES[saved]) { currentLang = saved; }
+    sessionStorage.setItem('nightmare_lang', currentLang);
+  } catch(e) {}
+  document.getElementById('langLabel').textContent = currentLang.toUpperCase();
+  buildLangDropdown();
+
+  /* ========== THREE.JS ========== */
+  (function initThree() {
     const container = document.getElementById('three-container');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x030308);
     scene.fog = new THREE.FogExp2(0x030308, 0.006);
-
     const camera = new THREE.PerspectiveCamera(80, window.innerWidth/window.innerHeight, 0.1, 1000);
     camera.position.set(0, 1.7, 0);
-
     const renderer = new THREE.WebGLRenderer({ antialias: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     container.appendChild(renderer.domElement);
 
     const sz = 28;
-    const wm = new THREE.MeshStandardMaterial({ color: 0x0a0a12, roughness: 1, metalness: 0, flatShading: true });
-    const fm = new THREE.MeshStandardMaterial({ color: 0x08080e, roughness: 1, metalness: 0 });
-
-    function wall(w, h, pos, rot) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.3), wm);
-      m.position.set(pos.x, pos.y, pos.z);
-      if (rot) m.rotation.y = rot;
-      scene.add(m);
-    }
-    wall(sz, 6, {x:0,y:3,z:-sz/2});
-    wall(sz, 6, {x:0,y:3,z:sz/2}, Math.PI);
-    wall(sz, 6, {x:-sz/2,y:3,z:0}, Math.PI/2);
-    wall(sz, 6, {x:sz/2,y:3,z:0}, -Math.PI/2);
-
-    const fl = new THREE.Mesh(new THREE.PlaneGeometry(sz, sz), fm);
-    fl.rotation.x = -Math.PI/2; fl.position.y = 0; scene.add(fl);
-    const cl = new THREE.Mesh(new THREE.PlaneGeometry(sz, sz), fm);
-    cl.rotation.x = Math.PI/2; cl.position.y = 6; scene.add(cl);
-
-    // Dark tiles
-    const tm = new THREE.MeshStandardMaterial({ color: 0x1a1a12, roughness: 1, metalness: 0, flatShading: true });
-    for (let i = -12; i <= 12; i += 2)
-      for (let j = -12; j <= 12; j += 2) {
-        const t = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), tm);
-        t.rotation.x = -Math.PI/2; t.position.set(i, 0.02, j); scene.add(t);
-      }
-
-    // Lights
-    const lm = new THREE.MeshStandardMaterial({ color: 0x909060, emissive: 0x505020, emissiveIntensity: 0.3 });
-    for (let x = -10; x <= 10; x += 4)
-      for (let z = -10; z <= 10; z += 4) {
-        const lb = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.05, 0.2), lm);
-        lb.position.set(x, 5.95, z); scene.add(lb);
-      }
-
-    const amb = new THREE.AmbientLight(0x202040, 0.3);
-    scene.add(amb);
-    const dl = new THREE.DirectionalLight(0x606040, 0.12);
-    dl.position.set(5, 10, 5); scene.add(dl);
-
-    // Anomalies
-    const anoms = [];
-    for (let a = 0; a < 15; a++) {
-      const g = new THREE.BoxGeometry(0.15+Math.random()*0.4, 0.3+Math.random()*2, 0.15+Math.random()*0.4);
-      const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x030308, roughness: 0.2, metalness: 0.9 }));
-      const ang = Math.random()*Math.PI*2;
-      const dist = 2+Math.random()*8;
-      m.position.set(Math.cos(ang)*dist, 0.2, Math.sin(ang)*dist);
-      scene.add(m); anoms.push(m);
-    }
-
-    // Distant figure
-    const fgMat = new THREE.MeshStandardMaterial({ color: 0x030308, transparent: true, opacity: 0 });
-    const fgBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 1.8, 6), fgMat);
-    fgBody.position.set(0, 0.9, -11); scene.add(fgBody);
-    const fgHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), fgMat);
-    fgHead.position.set(0, 1.9, -11); scene.add(fgHead);
-
-    // Shadow
-    const sg = new THREE.PlaneGeometry(4, 3);
-    const sm = new THREE.MeshBasicMaterial({ color: 0x000, transparent: true, opacity: 0.04, side: THREE.DoubleSide });
-    const sh = new THREE.Mesh(sg, sm);
-    sh.rotation.x = -Math.PI/2; sh.position.set(0, 0.05, 6); scene.add(sh);
-
-    let time = 0, ft = 0, figTimer = 0, figVisible = false;
-
-    function anim() {
-      requestAnimationFrame(anim);
-      time += 0.005; ft += 0.016; figTimer += 0.016;
-
-      camera.position.x = Math.sin(time*0.06)*0.15;
-      camera.position.z = Math.cos(time*0.05)*0.15;
-      camera.lookAt(0, 1.6, -10);
-
-      if (ft > Math.random()*1.5+1) {
-        lm.emissiveIntensity = Math.random()>0.2 ? 0.12 : 0.5;
-        if (Math.random()>0.8) { lm.emissiveIntensity = 0.8;
-          setTimeout(()=>lm.emissiveIntensity=0.12, 50); }
-        ft = 0;
-      }
-
-      anoms.forEach((a,i) => {
-        a.rotation.y += 0.005*(i+1);
-        a.position.y = 0.2 + Math.sin(time*3+i*1.5)*0.2;
-        a.scale.y = 1 + Math.sin(time*4+i)*0.15;
-      });
-
-      sh.position.x = Math.sin(time*0.2)*6;
-      sh.position.z = 7 + Math.sin(time*0.12)*4;
-      sm.opacity = 0.03 + Math.sin(time*0.4)*0.02;
-
-      // Figure appears
-      if (figTimer > 6 && !figVisible) {
-        figVisible = true; let f = 0;
-        const iv = setInterval(() => {
-          f += 0.03;
-          fgMat.opacity = Math.min(f*0.12, 0.12);
-          if (f >= 1) {
-            clearInterval(iv);
-            setTimeout(() => {
-              let fo = 1;
-              const ov = setInterval(() => {
-                fo -= 0.04;
-                fgMat.opacity = Math.max(fo*0.12, 0);
-                if (fo <= 0) { clearInterval(ov); fgMat.opacity = 0; figVisible = false; figTimer = 0; }
-              }, 40);
-            }, 2000+Math.random()*4000);
-          }
-        }, 40);
-      }
-
-      renderer.render(scene, camera);
-    }
+    const wm = new THREE.MeshStandardMaterial({ color:0x0a0a12, roughness:1, metalness:0, flatShading:true });
+    function wall(w,h,pos,rot) { const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.3),wm); m.position.set(pos.x,pos.y,pos.z); if(rot)m.rotation.y=rot; scene.add(m); }
+    wall(sz,6,{x:0,y:3,z:-sz/2}); wall(sz,6,{x:0,y:3,z:sz/2},Math.PI); wall(sz,6,{x:-sz/2,y:3,z:0},Math.PI/2); wall(sz,6,{x:sz/2,y:3,z:0},-Math.PI/2);
+    const fm=new THREE.MeshStandardMaterial({color:0x08080e,roughness:1,metalness:0});
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(sz,sz),fm); fl.rotation.x=-Math.PI/2; fl.position.y=0; scene.add(fl);
+    const cl=new THREE.Mesh(new THREE.PlaneGeometry(sz,sz),fm); cl.rotation.x=Math.PI/2; cl.position.y=6; scene.add(cl);
+    const tm=new THREE.MeshStandardMaterial({color:0x1a1a12,roughness:1,metalness:0,flatShading:true});
+    for(let i=-12;i<=12;i+=2) for(let j=-12;j<=12;j+=2){ const t=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.8),tm); t.rotation.x=-Math.PI/2; t.position.set(i,j,0.02); scene.add(t); }
+    const lm=new THREE.MeshStandardMaterial({color:0x707050,emissive:0x404020,emissiveIntensity:0.2});
+    for(let x=-10;x<=10;x+=4) for(let z=-10;z<=10;z+=4){ const lb=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.05,0.2),lm); lb.position.set(x,5.95,z); scene.add(lb); }
+    const amb=new THREE.AmbientLight(0x202040,0.3); scene.add(amb);
+    const dl=new THREE.DirectionalLight(0x606040,0.12); dl.position.set(5,10,5); scene.add(dl);
+    const anoms=[]; for(let a=0;a<12;a++){ const g=new THREE.BoxGeometry(0.15+Math.random()*0.4,0.3+Math.random()*2,0.15+Math.random()*0.4); const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x030308,roughness:0.2,metalness:0.9})); const ang=Math.random()*Math.PI*2; const dist=2+Math.random()*8; m.position.set(Math.cos(ang)*dist,0.2,Math.sin(ang)*dist); scene.add(m); anoms.push(m); }
+    const sg=new THREE.PlaneGeometry(4,3); const sm=new THREE.MeshBasicMaterial({color:0x000,transparent:true,opacity:0.03,side:THREE.DoubleSide}); const sh=new THREE.Mesh(sg,sm); sh.rotation.x=-Math.PI/2; sh.position.set(0,0.05,6); scene.add(sh);
+    let time=0,ft=0; function anim(){ requestAnimationFrame(anim); time+=0.005; ft+=0.016; camera.position.x=Math.sin(time*0.06)*0.15; camera.position.z=Math.cos(time*0.05)*0.15; camera.lookAt(0,1.6,-10); if(ft>Math.random()*1.5+1){lm.emissiveIntensity=Math.random()>0.2?0.1:0.4; if(Math.random()>0.8){lm.emissiveIntensity=0.6; setTimeout(()=>lm.emissiveIntensity=0.1,60);} ft=0;} anoms.forEach((a,i)=>{a.rotation.y+=0.005*(i+1); a.position.y=0.2+Math.sin(time*3+i*1.5)*0.2; a.scale.y=1+Math.sin(time*4+i)*0.15;}); sh.position.x=Math.sin(time*0.2)*6; sh.position.z=7+Math.sin(time*0.12)*4; sm.opacity=0.03+Math.sin(time*0.4)*0.02; renderer.render(scene,camera); }
     anim();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth/window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
   })();
 
-  /* ========== GLITCH (AGGRESSIVE) ========== */
-  (function() {
-    const c = document.getElementById('glitch-overlay');
-    const ctx = c.getContext('2d');
-    let w, h;
-    function rs() { w = c.width = window.innerWidth; h = c.height = window.innerHeight; }
-    rs(); window.addEventListener('resize', rs);
+  /* ========== HORROR FX ========== */
+  const faceCanvas = document.getElementById('face-overlay');
+  const faceCtx = faceCanvas.getContext('2d');
+  const bloodCanvas = document.getElementById('blood-overlay');
+  const bloodCtx = bloodCanvas.getContext('2d');
+  const flashEl = document.getElementById('flash-overlay');
+  const shakeEl = document.getElementById('shake-layer');
+  let scareCD = 0;
 
-    function loop() {
-      ctx.clearRect(0, 0, w, h);
-      // Heavy slice shifting
-      if (Math.random() > 0.85) {
-        const sy = Math.random()*h, sh = 2+Math.random()*50;
-        ctx.fillStyle = `rgba(0,0,0,${0.3+Math.random()*0.5})`;
-        ctx.fillRect(0, sy, w, sh);
-        ctx.fillStyle = `rgba(50,30,30,${Math.random()*0.1})`;
-        ctx.fillRect((Math.random()-0.5)*80, sy, w, sh);
+  function resizeAll() { faceCanvas.width=bloodCanvas.width=window.innerWidth; faceCanvas.height=bloodCanvas.height=window.innerHeight; }
+  resizeAll(); window.addEventListener('resize',resizeAll);
+
+  function drawFace(w,h) {
+    faceCtx.clearRect(0,0,w,h); faceCtx.fillStyle='#000'; faceCtx.fillRect(0,0,w,h);
+    const cx=w/2,cy=h/2,s=Math.min(w,h)*0.45;
+    faceCtx.save(); faceCtx.translate(cx,cy);
+    faceCtx.beginPath(); faceCtx.ellipse(0,0,s*1.2,s*1.5,0,0,Math.PI*2); faceCtx.fillStyle='#14141e'; faceCtx.fill();
+    for(let side=-1;side<=1;side+=2){ faceCtx.beginPath(); faceCtx.ellipse(side*s*0.45,-s*0.25,s*0.25,s*0.32,0,0,Math.PI*2); faceCtx.fillStyle='#050505'; faceCtx.fill(); faceCtx.beginPath(); faceCtx.arc(side*s*0.45+side*s*0.06,-s*0.22+s*0.03,s*0.1,0,Math.PI*2); faceCtx.fillStyle=`rgba(180,180,180,${0.6+Math.random()*0.4})`; faceCtx.fill(); }
+    const mouthY=s*0.4; faceCtx.beginPath(); faceCtx.ellipse(0,mouthY,s*0.65,s*0.18,0,0,Math.PI); faceCtx.strokeStyle='#1a1a1a'; faceCtx.lineWidth=4; faceCtx.stroke();
+    for(let t=-6;t<=6;t++){ const tx=t*s*0.07; faceCtx.fillStyle='#d0d0d0'; const tw=s*0.04,th=s*0.07+Math.sin(t*1.5)*s*0.02; faceCtx.fillRect(tx-tw/2,mouthY-th,tw,th); faceCtx.strokeStyle='#333'; faceCtx.lineWidth=0.5; faceCtx.strokeRect(tx-tw/2,mouthY-th,tw,th); }
+    for(let t=-5;t<=5;t++){ const tx=t*s*0.07; faceCtx.fillStyle='#c8c8c8'; const tw=s*0.035,th=s*0.05; faceCtx.fillRect(tx-tw/2,mouthY+2,tw,th); faceCtx.strokeStyle='#333'; faceCtx.lineWidth=0.5; faceCtx.strokeRect(tx-tw/2,mouthY+2,tw,th); }
+    for(let d=0;d<30;d++){ faceCtx.fillStyle=`rgba(0,0,0,${Math.random()*0.7})`; faceCtx.fillRect((Math.random()-0.5)*s*2.6,(Math.random()-0.5)*s*3,Math.random()*s*0.4+s*0.05,Math.random()*6+2); }
+    faceCtx.restore();
+  }
+
+  function drawFigure(w,h) {
+    faceCtx.clearRect(0,0,w,h); faceCtx.fillStyle='#000'; faceCtx.fillRect(0,0,w,h);
+    const cx=w/2,cy=h/2+h*0.1,s=Math.min(w,h)*0.35;
+    faceCtx.fillStyle='#08080a'; faceCtx.beginPath(); faceCtx.moveTo(cx-s*0.35,cy+s*0.9); faceCtx.lineTo(cx-s*0.55,cy-s*0.3); faceCtx.quadraticCurveTo(cx,cy-s*1.5,cx+s*0.55,cy-s*0.3); faceCtx.lineTo(cx+s*0.35,cy+s*0.9); faceCtx.closePath(); faceCtx.fill();
+    faceCtx.beginPath(); faceCtx.ellipse(cx,cy-s*0.8,s*0.28,s*0.35,0,0,Math.PI*2); faceCtx.fill();
+    faceCtx.fillStyle='#000'; faceCtx.beginPath(); faceCtx.ellipse(cx-s*0.12,cy-s*0.85,s*0.06,s*0.09,0,0,Math.PI*2); faceCtx.fill(); faceCtx.beginPath(); faceCtx.ellipse(cx+s*0.12,cy-s*0.85,s*0.06,s*0.09,0,0,Math.PI*2); faceCtx.fill();
+    faceCtx.strokeStyle='#08080a'; faceCtx.lineWidth=s*0.15; faceCtx.lineCap='round';
+    faceCtx.beginPath(); faceCtx.moveTo(cx-s*0.5,cy-s*0.2); faceCtx.quadraticCurveTo(cx-s*1.1,cy+s*0.5,cx-s*0.9,cy+s*0.3); faceCtx.stroke();
+    faceCtx.beginPath(); faceCtx.moveTo(cx+s*0.5,cy-s*0.2); faceCtx.quadraticCurveTo(cx+s*1.1,cy+s*0.5,cx+s*0.9,cy+s*0.3); faceCtx.stroke();
+    for(let d=0;d<25;d++){ faceCtx.fillStyle=`rgba(255,255,255,${Math.random()*0.04})`; faceCtx.fillRect(Math.random()*w,Math.random()*h,Math.random()*200+30,Math.random()*3+1); }
+  }
+
+  function addBlood() {
+    const w=bloodCanvas.width,h=bloodCanvas.height; bloodCtx.clearRect(0,0,w,h);
+    for(let i=0;i<30;i++){ const x=Math.random()*w, y=Math.random()*h, len=20+Math.random()*80; bloodCtx.strokeStyle=`rgba(80,0,0,${0.2+Math.random()*0.3})`; bloodCtx.lineWidth=2+Math.random()*6; bloodCtx.lineCap='round'; bloodCtx.beginPath(); bloodCtx.moveTo(x,y); bloodCtx.quadraticCurveTo(x+(Math.random()-0.5)*20,y+len*0.5,x+(Math.random()-0.5)*15,y+len); bloodCtx.stroke(); }
+  }
+
+  function trigger(type) {
+    if(scareCD>Date.now()) return; scareCD=Date.now()+2500;
+    const w=faceCanvas.width,h=faceCanvas.height;
+    flashNow(Math.random()>0.3?'#fff':'#800');
+    if(!type||type==='face') drawFace(w,h); else if(type==='figure') drawFigure(w,h);
+    else { faceCtx.clearRect(0,0,w,h); for(let i=0;i<500;i++){faceCtx.fillStyle=`rgba(255,255,255,${Math.random()*0.3})`;faceCtx.fillRect(Math.random()*w,Math.random()*h,Math.random()*50+5,Math.random()*3+1);} }
+    faceCanvas.classList.add('active'); screenShake(8); playScareSound();
+    if(Math.random()>0.5){ document.getElementById('blood-overlay').classList.add('active'); addBlood(); setTimeout(()=>document.getElementById('blood-overlay').classList.remove('active'),3000); }
+    setTimeout(()=>faceCanvas.classList.remove('active'),150+Math.random()*100);
+  }
+
+  function flashNow(color){ flashEl.style.background=color||'#fff'; flashEl.classList.add('active'); setTimeout(()=>flashEl.classList.remove('active'),50+Math.random()*80); }
+
+  function screenShake(intensity){ let c=0; const m=Math.min(intensity*2,25); const iv=setInterval(()=>{shakeEl.style.transform=`translate(${(Math.random()-0.5)*intensity*3}px,${(Math.random()-0.5)*intensity*3}px)`; if(c++>m){clearInterval(iv);shakeEl.style.transform='translate(0,0)';}},25); }
+
+  function showStatic(dur){ const el=document.getElementById('static-overlay'); el.style.background=`url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(#n)" opacity="0.8"/></svg>')`; el.classList.add('active'); setTimeout(()=>el.classList.remove('active'),dur||500); }
+
+  /* ========== AUDIO ========== */
+  function initAudio() {
+    if(audioCtx) return;
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    try {
+      const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=19; const g=audioCtx.createGain(); g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.12,audioCtx.currentTime+6); const f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=80; o.connect(f); f.connect(g); g.connect(audioCtx.destination); o.start();
+      const o2=audioCtx.createOscillator(); o2.type='triangle'; o2.frequency.value=33; const g2=audioCtx.createGain(); g2.gain.setValueAtTime(0,audioCtx.currentTime); g2.gain.linearRampToValueAtTime(0.06,audioCtx.currentTime+8); const f2=audioCtx.createBiquadFilter(); f2.type='lowpass'; f2.frequency.value=120; o2.connect(f2); f2.connect(g2); g2.connect(audioCtx.destination); o2.start();
+      const nb=audioCtx.createBuffer(1,audioCtx.sampleRate*4,audioCtx.sampleRate); const nd=nb.getChannelData(0); for(let i=0;i<nd.length;i++)nd[i]=(Math.random()*2-1)*0.015; const ns=audioCtx.createBufferSource(); ns.buffer=nb; ns.loop=true; const ng=audioCtx.createGain(); ng.gain.setValueAtTime(0,audioCtx.currentTime); ng.gain.linearRampToValueAtTime(0.05,audioCtx.currentTime+8); const nf=audioCtx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value=600; ns.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination); ns.start();
+    } catch(e){}
+  }
+
+  function playScareSound(){ if(!audioCtx) return; try{ const d=0.2+Math.random()*0.2,f=100+Math.random()*2000; const b=audioCtx.createBuffer(1,audioCtx.sampleRate*d,audioCtx.sampleRate); const dd=b.getChannelData(0); for(let i=0;i<dd.length;i++){const t=i/audioCtx.sampleRate;dd[i]=Math.sin(2*Math.PI*f*t)*Math.exp(-t*10)*0.6+ (Math.random()*2-1)*0.3*Math.exp(-t*5);dd[i]=Math.tanh(dd[i]*4)/4;} const s=audioCtx.createBufferSource();s.buffer=b;const g=audioCtx.createGain();g.gain.value=0.7;const dist=audioCtx.createWaveShaper();const curve=new Float32Array(256);for(let i=0;i<256;i++)curve[i]=((Math.PI+300)*((i*2)/256-1))/(Math.PI+300*Math.abs((i*2)/256-1));dist.curve=curve;s.connect(dist);dist.connect(g);g.connect(audioCtx.destination);s.start();}catch(e){}
+  }
+
+  function whisper(text) {
+    if(!window.speechSynthesis) return;
+    try{ const u=new SpeechSynthesisUtterance(text); u.rate=0.3+Math.random()*0.2; u.pitch=0.3+Math.random()*0.3; u.volume=0.3+Math.random()*0.2; u.lang='en-US'; const voices=speechSynthesis.getVoices(); if(voices.length) u.voice=voices[Math.floor(Math.random()*voices.length)]; speechSynthesis.speak(u); }catch(e){}
+  }
+
+  /* ========== BSOD ========== */
+  function bsod(){
+    if(document.getElementById('bsod-overlay').classList.contains('active')) return;
+    const el=document.getElementById('bsod-overlay'); const t=document.getElementById('bsod-text');
+    const msgs=['SYSTEM FAILURE: IT GOT IN','FATAL_ERROR: 0xDEADFACE','YOUR_SYSTEM_IS_COMPROMISED','CONTAINMENT_BREACH'];
+    t.innerHTML=`<div style="font-size:26px;margin-bottom:20px;color:#ccd">😐</div><div style="font-size:20px;margin-bottom:30px;color:#dde">${msgs[Math.floor(Math.random()*msgs.length)]}</div><div style="font-size:13px;line-height:1.8;color:#99a">press any key to continue facing it.</div>`;
+    el.classList.add('active'); screenShake(10); flashNow('#88aaff');
+    document.addEventListener('keydown',()=>{el.classList.remove('active');trigger('face');},{once:true});
+    document.addEventListener('click',()=>{el.classList.remove('active');trigger('face');},{once:true});
+  }
+
+  /* ========== MONSTER ENDING ========== */
+  function triggerMonster() {
+    if(monsterTriggered) return; monsterTriggered=true;
+    flashNow('#fff'); screenShake(20);
+    drawFigure(faceCanvas.width,faceCanvas.height);
+    faceCanvas.classList.add('active');
+    playScareSound(); playScareSound();
+    addBlood(); document.getElementById('blood-overlay').classList.add('active');
+    whisper('i never left');
+    showStatic(1500);
+    setTimeout(() => {
+      faceCanvas.classList.remove('active');
+      document.getElementById('blood-overlay').classList.remove('active');
+      setTimeout(()=>{trigger('face'); bsod();},500);
+    }, 3500);
+  }
+
+  /* ========== WORD INFECTION ========== */
+  function infectWords() {
+    const totalDeg = scrollFraction + sessionDegradation * 0.3;
+    if(totalDeg<0.2) return;
+    document.querySelectorAll('.infected-word').forEach(word => {
+      if(word.dataset.infected) return;
+      if(Math.random()<0.015*(1+totalDeg*2)) {
+        const original = word.dataset.original || word.textContent.toLowerCase();
+        if(!word.dataset.original) word.dataset.original = word.textContent;
+        const dict = t('infectionDict');
+        const pool = dict[original];
+        if(pool) {
+          word.textContent = pool[Math.floor(Math.random()*pool.length)];
+          word.style.color='#6b2020'; word.style.letterSpacing='1.5px'; word.dataset.infected='1';
+          infectedCount++;
+          setTimeout(() => {
+            word.textContent = word.dataset.original;
+            word.style.color=''; word.style.letterSpacing=''; delete word.dataset.infected;
+          }, 2000+Math.random()*3000);
+        }
       }
-      // RGB split
-      if (Math.random() > 0.95) {
-        const sy = Math.random()*h, sh = Math.random()*20+2;
-        ctx.fillStyle = 'rgba(255,0,0,0.04)';
-        ctx.fillRect(8, sy, w, sh);
-        ctx.fillStyle = 'rgba(0,0,255,0.04)';
-        ctx.fillRect(-8, sy+1, w, sh);
-      }
-      // White flash blocks
-      if (Math.random() > 0.99) {
-        ctx.fillStyle = `rgba(255,255,255,${0.15+Math.random()*0.25})`;
-        ctx.fillRect(Math.random()*w*0.5, Math.random()*h*0.5, Math.random()*200+50, Math.random()*100+20);
-      }
-      // Black crushing
-      if (Math.random() > 0.97) {
-        ctx.fillStyle = `rgba(0,0,0,${0.5+Math.random()*0.5})`;
-        ctx.fillRect(Math.random()*w*0.6, Math.random()*h*0.6, Math.random()*300+50, Math.random()*200+30);
-      }
-      if (fearLevel > 10) {
-        ctx.globalAlpha = 0.3;
-      }
+    });
+  }
+
+  /* ========== GLITCH ========== */
+  (function initGlitch() {
+    const c=document.getElementById('glitch-overlay'); const ctx=c.getContext('2d'); let w,h;
+    function rs(){w=c.width=window.innerWidth;h=c.height=window.innerHeight;} rs(); window.addEventListener('resize',rs);
+    function loop(){ ctx.clearRect(0,0,w,h);
+      if(Math.random()>0.85){const sy=Math.random()*h,sh=2+Math.random()*50;ctx.fillStyle=`rgba(0,0,0,${0.3+Math.random()*0.5})`;ctx.fillRect(0,sy,w,sh);ctx.fillStyle=`rgba(50,30,30,${Math.random()*0.1})`;ctx.fillRect((Math.random()-0.5)*80,sy,w,sh);}
+      if(Math.random()>0.95){const sy=Math.random()*h,sh=Math.random()*20+2;ctx.fillStyle='rgba(255,0,0,0.04)';ctx.fillRect(8,sy,w,sh);ctx.fillStyle='rgba(0,0,255,0.04)';ctx.fillRect(-8,sy+1,w,sh);}
+      if(Math.random()>0.99){ctx.fillStyle=`rgba(255,255,255,${0.15+Math.random()*0.25})`;ctx.fillRect(Math.random()*w*0.5,Math.random()*h*0.5,Math.random()*200+50,Math.random()*100+20);}
+      if(Math.random()>0.97){ctx.fillStyle=`rgba(0,0,0,${0.5+Math.random()*0.5})`;ctx.fillRect(Math.random()*w*0.6,Math.random()*h*0.6,Math.random()*300+50,Math.random()*200+30);}
+      const totalDeg=scrollFraction+sessionDegradation*0.3;
+      if(totalDeg>0.6){ctx.globalAlpha=0.3+totalDeg*0.2;} else ctx.globalAlpha=1;
       requestAnimationFrame(loop);
     }
     loop();
   })();
 
-  /* ========== BEHAVIOR ========== */
-  const counter = document.getElementById('corner-counter');
-
-  document.addEventListener('click', () => {
-    clicks++; lastAction = Date.now();
-    if (!audioReady) initAudio();
-    counter.textContent = clicks;
-
-    if (clicks === 3) popup({ t: 'it heard that', b: 'every click brings it closer.', btn: '...', danger: true });
-    if (clicks === 5) trigger('face');
-    if (clicks === 8) {
-      popup({ t: 'YOUR WEBCAM IS ACTIVE', b: 'it can see your face.\nit likes what it sees.', btn: 'stop', danger: true, cb: ()=>trigger('figure') });
-      whisper("i can see you");
-    }
-    if (clicks === 12) {
-      trigger('face');
-      setTimeout(()=>popup({t:'it smiled at you', b:'when you blinked,\nit moved closer.', btn:'...', danger:true}), 400);
-    }
-    if (clicks === 18) bsod();
-    if (clicks === 25) {
-      popup({ t: 'YOU HAVE BEEN CHOSEN', b: 'it wants to wear your skin.', btn: 'no', danger: true, cb: ()=>{trigger('figure');whisper('you cannot escape');} });
-    }
-    if (clicks % 5 === 0 && clicks > 0) trigger(Math.random()>0.5?'face':'figure');
-    if (clicks % 3 === 0) { flashNow('#fff'); screenShake(5); }
-    if (clicks > 10 && Math.random() > 0.6) whisper('stop clicking');
-  });
-
-  document.addEventListener('keydown', (e) => {
-    keys++; lastAction = Date.now();
-    if (!audioReady) initAudio();
-    if (keys === 10) { trigger('face'); popup({t:'it can hear you typing', b:'every keystroke is a heartbeat.', btn:'...', danger:true}); }
-    if (keys === 20) bsod();
-    if (keys > 5 && keys % 7 === 0) { trigger('staticjump'); flashNow('#fff'); screenShake(8); }
-  });
-
-  let lastMove = 0;
-  document.addEventListener('mousemove', (e) => {
-    moves++; lastAction = Date.now();
-    if (!audioReady) { initAudio(); }
-    if (Date.now() - lastMove > 3000 && moves > 20 && Math.random() > 0.8) {
-      trigger('figure');
-      lastMove = Date.now();
-    }
-  });
-
-  // Aggressive cursor trail
-  const trail = [];
-  for (let i = 0; i < 40; i++) {
-    const d = document.createElement('div');
-    d.style.cssText = `position:fixed;pointer-events:none;z-index:6;border-radius:50%;
-      width:${4-i*0.07}px;height:${4-i*0.07}px;background:rgba(80,70,70,${0.3-i*0.007});
-      transition:all 0.04s ease-out;`;
-    document.body.appendChild(d);
-    trail.push({ el: d, x: 0, y: 0 });
-  }
-  let ti = 0;
-  document.addEventListener('mousemove', (e) => {
-    trail[ti].x = e.clientX; trail[ti].y = e.clientY;
-    ti = (ti+1)%trail.length;
-    for (let i = 0; i < trail.length; i++) {
-      const t = trail[(ti+i)%trail.length];
-      t.el.style.left = (t.x + (Math.random()-0.5)*i*1.2)+'px';
-      t.el.style.top = (t.y + (Math.random()-0.5)*i*1.2)+'px';
-    }
-  });
-
-  // ---- IDLE ----
-  function rstIdle() {
-    idleSec = 0; lastAction = Date.now();
-    if (idleTimer) clearInterval(idleTimer);
-    idleTimer = setInterval(() => {
-      idleSec++;
-      const el = document.getElementById('corner-counter');
-      el.textContent = clicks + ' | ' + idleSec;
-      if (idleSec === 4) { document.title = '...'; setTimeout(()=>document.title="you shouldn't be here", 2000); }
-      if (idleSec === 7) { popup({t:'you\'re very quiet', b:'it can hear your heartbeat.', btn:'...', danger:true}); whisper('i hear you breathing'); }
-      if (idleSec === 10) trigger('face');
-      if (idleSec === 14) { trigger('figure'); whisper('stand up'); }
-      if (idleSec === 18) bsod();
-      if (idleSec === 22) { trigger('face'); popup({t:'IT IS RIGHT BEHIND YOU', b:'do not turn around.\ndo not breathe.', btn:'...', danger:true}); }
-      if (idleSec === 30) { trigger('figure'); addBlood(); document.getElementById('blood-overlay').classList.add('active'); }
-      if (idleSec > 5 && idleSec % 6 === 0) { flashNow('#fff'); playScareSound(); screenShake(6); }
-    }, 1000);
-  }
-  ['mousemove','keydown','click','touchstart','wheel'].forEach(ev => document.addEventListener(ev, rstIdle));
-  rstIdle();
-
-  // ---- RANDOM ATTACKS ----
-  setTimeout(() => {
-    if (scares < 2) { trigger('face'); whisper('hello'); }
-  }, 15000);
-
-  setInterval(() => {
-    if (bsodActive) return;
-    if (Math.random() > 0.5) return;
-    const r = Math.random();
-    if (r < 0.35) trigger('face');
-    else if (r < 0.6) trigger('figure');
-    else if (r < 0.8) trigger('staticjump');
-    else bsod();
-  }, 8000 + Math.random()*12000);
-
-  // ---- CLOSE ----
-  let closeCount = 0;
-  window.addEventListener('beforeunload', (e) => {
-    closeCount++;
-    e.preventDefault(); e.returnValue = '';
-    if (closeCount === 1) {
-      trigger('face');
-      setTimeout(() => popup({t:'leaving?', b:'it was just getting to know you.', btn:'stay', danger:true, cb:()=>whisper('good choice')}), 200);
-    } else if (closeCount === 2) {
-      bsod();
-    } else {
-      trigger('figure');
-      whisper('you cannot leave');
-      popup({t:'THE DOOR IS GONE', b:'there is no exit anymore.\nyou belong to it now.', btn:'...', danger:true});
-    }
-  });
-
-  // ---- DEVTOOLS ----
-  setInterval(() => {
-    const s = performance.now();
-    debugger;
-    if (performance.now() - s > 120) {
-      document.title = 'STOP LOOKING';
-      trigger('face');
-      const bl = document.createElement('div');
-      bl.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:#050508;z-index:999;
-        color:#3a3a3a;font-family:monospace;display:flex;align-items:center;justify-content:center;
-        font-size:28px;letter-spacing:0.5em;flex-direction:column;gap:20px;`;
-      bl.innerHTML = 'STOP LOOKING<div style="font-size:14px;color:#2a2a2a">it doesn\'t like being watched</div>';
-      document.body.appendChild(bl);
-      setTimeout(() => { bl.style.transition='opacity 1s'; bl.style.opacity='0';
-        setTimeout(()=>{bl.remove();document.title="you shouldn't be here";},1000); }, 4000);
-      playScareSound();
-    }
-  }, 1000);
-
-  // ---- NIGHTMARE TEXT ----
-  setInterval(() => {
-    const msg = NIGHTMARES[Math.floor(Math.random()*NIGHTMARES.length)];
-    const el = document.createElement('div');
-    el.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
-      color:rgba(60,50,50,0.12);font-family:monospace;font-size:13px;z-index:5;
-      letter-spacing:0.3em;pointer-events:none;transition:opacity 2s;text-align:center;`;
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(()=>el.style.opacity='0', 3500);
-    setTimeout(()=>el.remove(), 5500);
-  }, 6000);
-
-  // ---- TITLE CHAOS ----
-  const TITLES = ["DON'T LOOK BACK","it's watching","there's something behind you",
-    "you're not alone","GET OUT","STAY","it knows","it's in the walls","DON'T BLINK",
-    "run","it has your face","you're already dead"];
-  setInterval(() => {
-    if (Math.random() > 0.6) {
-      document.title = TITLES[Math.floor(Math.random()*TITLES.length)];
-      setTimeout(() => document.title = "you shouldn't be here", 2000 + Math.random()*2000);
-    }
-  }, 8000);
-
-  // ---- SPEECH TRIGGERS ----
-  setTimeout(() => whisper("hello"), 8000);
-  setTimeout(() => whisper("i can see you"), 18000);
-  setTimeout(() => whisper("don't be afraid"), 30000);
-
-  // ---- WEB REQUEST (fake telemetry) ----
-  try {
-    const data = {
-      screen: window.screen.width+'x'+window.screen.height,
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      lang: navigator.language,
-      ua: navigator.userAgent.substring(0, 100),
-      clicks: 0
-    };
-    // Log to console as fake "telemetry"
-    console.log('%cTELEMETRY UPLOADED', 'color:#1a1a1a;font-size:8px');
-    console.log('%c' + JSON.stringify(data), 'color:#1a1a1a;font-size:7px');
-  } catch(e) {}
-
-  // ---- FULLSCREEN ATTEMPT ----
-  setTimeout(() => {
-    try {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(()=>{});
-      }
-    } catch(e) {}
-  }, 5000);
-
-  // ---- FAKE WEBCAM POPUP ----
-  setTimeout(() => {
-    popup({t:'CAMERA_ACCESS: GRANTED', b:'your camera is now active.\nlook directly at the screen.\nit wants to see your eyes.', btn:'...', danger:true});
-  }, 22000);
-
-  // ---- RESIDUAL HAUNTING ----
-  setInterval(() => {
-    if (scares > 3 && Math.random() > 0.6) {
-      // Subtle: draw a single eye in corner
-      faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-      faceCtx.fillStyle = '#000';
-      faceCtx.fillRect(0, 0, faceCanvas.width, faceCanvas.height);
-      const ex = Math.random()*faceCanvas.width*0.7;
-      const ey = Math.random()*faceCanvas.height*0.7;
-      faceCtx.beginPath();
-      faceCtx.arc(ex, ey, 30, 0, Math.PI*2);
-      faceCtx.fillStyle = '#e0d8d0';
-      faceCtx.fill();
-      faceCtx.beginPath();
-      faceCtx.arc(ex, ey, 15, 0, Math.PI*2);
-      faceCtx.fillStyle = '#000';
-      faceCtx.fill();
-      faceCanvas.classList.add('active');
-      setTimeout(() => faceCanvas.classList.remove('active'), 70);
-    }
-  }, 5000);
-
-  // ========== STORY MODE ==========
-  const STORY = [
-    "The house was silent when I arrived. The kind of silence that presses against your ears until you hear your own blood moving.",
-    "The door at the end of the hall was slightly open. I could see nothing through the gap, but I felt something looking back.",
-    "I called out. No one answered. The floorboards groaned under my weight, and I could have sworn they moved slightly with each step.",
-    "The walls were covered in old wallpaper, yellowed and peeling. Some of the patterns seemed to shift when I wasn't looking directly at them.",
-    "I reached the door and pushed it open. The room beyond was empty except for a single chair in the center, facing away from me.",
-    "There was a mirror on the far wall. In the dim light, I could see my reflection. But it was smiling. I was not smiling.",
-    "I tried to leave, but the door behind me had vanished. The walls were closer now. The ceiling lower.",
-    "The reflection stepped out of the mirror. It walked towards me with my face but not my eyes. Its mouth opened wider than a mouth should open.",
-    "It spoke in my voice. It said: thank you for letting me in. I've been waiting so long to wear you again.",
-    "The lights went out. I felt its hands on my skin, cold and familiar. And then I remembered. I remembered everything.",
-    "There never was a house. There never was a door. There was only the dark, and I have always been here, and I will never leave.",
-    "Turn around."
-  ];
-
-  const REPLACEMENTS = [
-    { from: /door/gi, to: ['mouth', 'throat', 'hole', 'wound'] },
-    { from: /hall/gi, to: ['throat', 'tunnel', 'vein'] },
-    { from: /house/gi, to: ['cage', 'tomb', 'stomach', 'body'] },
-    { from: /room/gi, to: ['stomach', 'cage', 'womb', 'coffin'] },
-    { from: /walls?/gi, to: ['ribs', 'skin', 'bones', 'flesh'] },
-    { from: /floor\w*/gi, to: ['skin', 'tongue', 'flesh'] },
-    { from: /mirror/gi, to: ['eye', 'mouth', 'wound'] },
-    { from: /dark/gi, to: ['alive', 'watching', 'hungry', 'inside me'] },
-    { from: /light/gi, to: ['eye', 'teeth', 'scream'] },
-    { from: /silent/gi, to: ['dead', 'empty', 'waiting'] },
-    { from: /empty/gi, to: ['full of teeth', 'watching', 'hungry'] },
-    { from: /reflection/gi, to: ['it', 'the other one', 'my skin', 'the hunger'] },
-    { from: /face/gi, to: ['my face', 'its face', 'the hole'] },
-    { from: /eyes?/gi, to: ['holes', 'mouths', 'teeth'] },
-    { from: /smiling/gi, to: ['feeding', 'eating', 'stretching'] },
-    { from: /cold/gi, to: ['inside me', 'alive', 'moving'] },
-    { from: /hands?/gi, to: ['claws', 'roots', 'teeth'] },
-    { from: /door/gi, to: ['mouth', 'throat', 'hole'] },
-  ];
-
-  const storyOverlay = document.getElementById('story-overlay');
-  const storyText = document.getElementById('story-text');
-  const storyProgress = document.getElementById('story-progress');
-  const storySkip = document.getElementById('story-skip');
-
-  let storyActive = false;
-  let storyIndex = 0;
-  let storyTimer = null;
-  let storyCorruption = 0;
-  let storyWords = [];
-
-  function startStory() {
-    if (storyActive) return;
-    storyActive = true;
-    storyIndex = 0;
-    storyCorruption = 0;
-    storyOverlay.classList.add('active');
-    initAudio();
-    showStoryParagraph(0);
+  /* ========== ORBS ========== */
+  function spawnOrb() {
+    const totalDeg=scrollFraction+sessionDegradation*0.3;
+    if(totalDeg<0.15) return;
+    const msgs=t('orbMessages'); if(!msgs||!msgs.length) return;
+    const msg=msgs[Math.floor(Math.random()*msgs.length)];
+    const orb=document.createElement('div'); orb.className='orb';
+    if(LANGUAGES[currentLang]?.rtl) orb.classList.add('rtl');
+    orb.textContent=msg;
+    orb.style.left=(5+Math.random()*85)+'%'; orb.style.top=(5+Math.random()*85)+'%';
+    document.getElementById('orbContainer').appendChild(orb);
+    requestAnimationFrame(()=>orb.style.opacity='0.7');
+    setTimeout(()=>{orb.style.opacity='0';setTimeout(()=>orb.remove(),4000);},2500+Math.random()*3000);
   }
 
-  function showStoryParagraph(idx) {
-    if (idx >= STORY.length) {
-      endStory();
-      return;
+  /* ========== DIALOGS ========== */
+  function triggerDialog() {
+    const totalDeg=scrollFraction+sessionDegradation*0.3;
+    if(totalDeg<0.35) return;
+    if(Math.random()>0.003*(1+totalDeg*2)) return;
+    const msgs=t('dialogMessages'); const msg=msgs[Math.floor(Math.random()*msgs.length)];
+    dialogTitle.textContent=msg.title; dialogBody.textContent=msg.body; dialogBtn.textContent=t('dialogAck');
+    document.getElementById('systemDialog').classList.add('visible');
+    setTimeout(()=>document.getElementById('systemDialog').classList.remove('visible'),2000+Math.random()*2500);
+  }
+  function dismissDialog(){ document.getElementById('systemDialog').classList.remove('visible'); }
+
+  /* ========== RIGHT CLICK ========== */
+  document.addEventListener('contextmenu',(e)=>{
+    e.preventDefault();
+    const totalDeg=scrollFraction+sessionDegradation*0.3;
+    if(totalDeg>0.5){
+      const notes=t('contextNotes'); const note=Array.isArray(notes)?notes[Math.floor(Math.random()*notes.length)]:notes;
+      const div=document.createElement('div'); div.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;font-family:'Times New Roman',serif;font-size:clamp(0.55rem,1.4vw,0.7rem);color:#8b4040;pointer-events:none;z-index:50;opacity:1;transition:opacity 2s;max-width:80vw;`;
+      div.textContent=note; document.body.appendChild(div);
+      setTimeout(()=>{div.style.opacity='0';setTimeout(()=>div.remove(),2000);},1500);
     }
-    storyIndex = idx;
-    const pct = ((idx + 1) / STORY.length) * 100;
-    storyProgress.style.width = pct + '%';
+  });
 
-    // Get base text and corrupt it based on progression
-    let text = STORY[idx];
-    const corruptionLevel = Math.floor(idx / 2); // increases every 2 paragraphs
+  /* ========== IDLE ========== */
+  function resetIdle(){idleTimer=0;if(isIdle){isIdle=false;document.body.style.filter='';document.title=t('pageTitles',0);}}
+  ['mousemove','keydown','scroll','click','touchstart','touchmove'].forEach(ev=>document.addEventListener(ev,resetIdle));
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){idleTimer=999;isIdle=true;document.body.style.filter='brightness(0.5) saturate(2) contrast(1.2)';document.title=t('idleTitles',2);}
+    else resetIdle();
+  });
 
-    // Apply word replacements based on corruption level
-    for (let r = 0; r < Math.min(corruptionLevel + 1, REPLACEMENTS.length); r++) {
-      const rule = REPLACEMENTS[r];
-      if (Math.random() < 0.7) {
-        const replacement = rule.to[Math.floor(Math.random() * rule.to.length)];
-        text = text.replace(rule.from, () => replacement);
-      }
+  /* ========== DEGRADATION ========== */
+  function getScrollFraction() {
+    const st=window.pageYOffset||document.documentElement.scrollTop;
+    const dh=document.documentElement.scrollHeight-window.innerHeight;
+    return dh>0?Math.min(st/dh,1):0;
+  }
+
+  function applyDegradation() {
+    scrollFraction = getScrollFraction();
+    const totalDeg = Math.min(scrollFraction + sessionDegradation * 0.3, 1.4);
+    const pct = Math.round(scrollFraction * 100);
+    document.getElementById('scrollPct').textContent = 'SCROLL: ' + pct + '%';
+    document.getElementById('infectedCount').textContent = 'INFECTED: ' + infectedCount;
+
+    // Stages
+    document.body.classList.remove('stage-1','stage-2','stage-3','stage-4','stage-5','stage-6','stage-7');
+    if(totalDeg>0.1) document.body.classList.add('stage-1');
+    if(totalDeg>0.25) document.body.classList.add('stage-2');
+    if(totalDeg>0.4) document.body.classList.add('stage-3');
+    if(totalDeg>0.55) document.body.classList.add('stage-4');
+    if(totalDeg>0.7) document.body.classList.add('stage-5');
+    if(totalDeg>0.85) document.body.classList.add('stage-6');
+    if(totalDeg>0.95) document.body.classList.add('stage-7');
+
+    // Heart rate increases with degradation
+    const now=Date.now();
+    if(now-lastHeartUpdate>2000) {
+      heartRate = Math.round(72 + totalDeg * 80 + Math.sin(now/1000)*5);
+      document.getElementById('heartbeat').textContent = '♡ ' + heartRate + ' BPM';
+      lastHeartUpdate = now;
     }
 
-    // Apply letter corruption at high levels
-    if (corruptionLevel > 3) {
-      text = text.split('').map((ch, i) => {
-        if (ch.match(/[a-zA-Z]/) && Math.random() < 0.03 * (corruptionLevel - 3)) {
-          const corrupt = String.fromCharCode(ch.charCodeAt(0) + (Math.random() > 0.5 ? 1 : -1));
-          return /[a-zA-Z]/.test(corrupt) ? corrupt : ch;
-        }
-        return ch;
-      }).join('');
-    }
+    // Title
+    const h1 = document.getElementById('mainTitle');
+    h1.style.transform = `skewX(${totalDeg*2}deg)`;
+    h1.textContent = t('titleStages', totalDeg>0.9?5:totalDeg>0.8?4:totalDeg>0.7?3:totalDeg>0.55?2:totalDeg>0.35?1:0);
 
-    // Add glitch spans to some words
-    const words = text.split(' ');
-    const htmlWords = words.map((w, i) => {
-      if (corruptionLevel > 1 && Math.random() < 0.04 * corruptionLevel) {
-        return `<span class="glitched">${w}</span>`;
-      }
-      if (Math.random() < 0.08 * (corruptionLevel + 1)) {
-        return `<span class="corrupted">${w}</span>`;
-      }
-      return w;
+    // Header date
+    document.getElementById('headerDate').style.letterSpacing = (3+totalDeg*15)+'px';
+    document.getElementById('headerDate').textContent = totalDeg>0.9?'you are not alone here':totalDeg>0.7?'it found you':totalDeg>0.5?'it saw you coming':totalDeg>0.3?'it knows you\'re reading':'you are here now';
+
+    // Footer
+    document.getElementById('footerWhisper').textContent = t('footerStages', totalDeg>0.95?6:totalDeg>0.9?5:totalDeg>0.8?4:totalDeg>0.65?3:totalDeg>0.5?2:totalDeg>0.3?1:0);
+
+    // Title
+    document.title = t('pageTitles', totalDeg>0.95?6:totalDeg>0.88?5:totalDeg>0.75?4:totalDeg>0.6?3:totalDeg>0.45?2:totalDeg>0.2?1:0);
+
+    // Clinical anomaly
+    const anomalyIdx = totalDeg>0.95?5:totalDeg>0.85?4:totalDeg>0.7?3:totalDeg>0.5?2:totalDeg>0.25?1:0;
+    document.getElementById('anomalyFlag').textContent = t('clinicalAnomaly', anomalyIdx);
+
+    // Vignette darkens
+    const vg = document.getElementById('vignette');
+    vg.style.background = `radial-gradient(ellipse at center, transparent ${40-totalDeg*20}%, rgba(0,0,0,${0.85+totalDeg*0.1}) 100%)`;
+
+    // Entries color
+    document.querySelectorAll('.entry').forEach((e,i)=>{
+      e.style.transform = `translateX(${Math.sin(totalDeg*10+i)*1.5}px)`;
+      if(totalDeg>0.7) e.style.color = '#8b6060';
     });
-    storyText.innerHTML = htmlWords.join(' ');
 
-    // Screen effects based on progression
-    if (corruptionLevel > 4) screenShake(3);
-    if (corruptionLevel > 6) flashNow('#000');
-
-    // Auto-advance
-    const delay = Math.max(3500, 10000 - corruptionLevel * 400);
-    if (storyTimer) clearTimeout(storyTimer);
-    storyTimer = setTimeout(() => showStoryParagraph(idx + 1), delay);
-
-    // Audio whispers during story
-    if (Math.random() > 0.5) whisper('keep reading');
-    if (corruptionLevel > 5) playScareSound();
+    // Check for monster at bottom
+    if(scrollFraction >= 0.99 && !monsterTriggered) {
+      triggerMonster();
+    }
   }
 
-  function endStory() {
-    if (storyTimer) clearTimeout(storyTimer);
-    // Final horror
-    storyText.style.color = '#4a2020';
-    storyText.innerHTML = 'It\'s right behind you.';
-    storyProgress.style.width = '100%';
-    storyProgress.style.background = 'rgba(120,0,0,0.5)';
+  /* ========== MAIN TICK ========== */
+  function tick() {
+    applyDegradation(); infectWords(); triggerDialog();
+    if(!audioCtx && scrollFraction>0.05) initAudio();
 
-    setTimeout(() => {
-      storyOverlay.classList.remove('active');
-      storyActive = false;
-      // The monster comes
-      drawFigure(faceCanvas.width, faceCanvas.height);
-      faceCanvas.classList.add('active');
-      screenShake(25);
-      flashNow('#fff');
-      playScareSound();
-      playScareSound('noise');
-      whisper('i never left');
-      addBlood();
-      document.getElementById('blood-overlay').classList.add('active');
+    orbTimer++;
+    const totalDeg=scrollFraction+sessionDegradation*0.3;
+    const orbInterval=120-totalDeg*60;
+    if(orbTimer>orbInterval&&Math.random()<0.5){spawnOrb();orbTimer=0;}
 
-      // Figure stays for 3 full seconds
-      setTimeout(() => {
-        faceCanvas.classList.remove('active');
-        document.getElementById('blood-overlay').classList.remove('active');
-        // Then face jumpscare as a final hit
-        setTimeout(() => trigger('face'), 500);
-        bsod();
-      }, 3000);
-    }, 2000);
+    idleTimer++;
+    if(idleTimer>250&&!isIdle){isIdle=true;document.title=t('idleTitles',0);}
+    if(idleTimer>500&&isIdle){document.title=t('idleTitles',1);}
+    if(idleTimer>800&&isIdle&&totalDeg>0.5){document.title=t('idleTitles',2);}
+
+    // Scare triggers at thresholds
+    if(totalDeg>0.65&&totalDeg<0.7&&Math.random()<0.001) trigger('face');
+    if(totalDeg>0.85&&totalDeg<0.9&&Math.random()<0.002) { trigger('figure'); whisper('keep going'); }
+
+    requestAnimationFrame(tick);
   }
 
-  // Auto-start story after entering
-  setTimeout(startStory, 1500);
+  // Init
+  document.addEventListener('click', initAudio, { once:true });
+  document.addEventListener('touchstart', initAudio, { once:true });
+  document.getElementById('dialogBtn').addEventListener('click', dismissDialog);
 
-  storySkip.addEventListener('click', () => {
-    if (storyTimer) clearTimeout(storyTimer);
-    if (storyActive) endStory();
-  });
+  // Fullscreen attempt on first scroll
+  document.addEventListener('scroll', () => {
+    try { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); } catch(e){}
+  }, { once:true });
 
-  // ---- INIT ----
-  document.addEventListener('click', initAudio, { once: true });
-  document.addEventListener('keydown', initAudio, { once: true });
-  document.addEventListener('mousemove', initAudio, { once: true });
+  tick();
+  applyDegradation();
 
-  console.log('%c⏺', 'font-size:100px;color:#0a0a0a');
+  console.log('%c⏺', 'font-size:80px;color:#0a0a0a');
   console.log('%cyou are being recorded', 'color:#2a2a2a;font-size:12px');
-  console.log('%cthere is no escape', 'color:#1a1a1a;font-size:10px');
 
 })();
 </script>
