@@ -124,21 +124,6 @@ canvas { display: block; }
   font-family: monospace; font-size: 10px; z-index: 5;
   pointer-events: none;
 }
-#story-trigger {
-  position: fixed; bottom: 80px; left: 50%;
-  transform: translateX(-50%);
-  color: rgba(80,80,80,0.15);
-  font-family: monospace; font-size: 13px; z-index: 10;
-  letter-spacing: 0.3em; cursor: pointer; pointer-events: auto;
-  transition: all 0.3s;
-  border: 1px solid rgba(60,60,60,0.1);
-  padding: 8px 20px;
-  background: rgba(10,10,10,0.3);
-}
-#story-trigger:hover {
-  color: rgba(120,120,120,0.3);
-  border-color: rgba(80,80,80,0.2);
-}
 #story-overlay {
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh;
@@ -206,7 +191,6 @@ canvas { display: block; }
 <div id="bsod-overlay"><div id="bsod-text"></div></div>
 <div id="flash-overlay"></div>
 <div id="corner-counter">0</div>
-<div id="story-trigger">[ read something ]</div>
 <div id="story-overlay">
   <div id="story-text"></div>
   <div id="story-progress"></div>
@@ -1168,7 +1152,6 @@ canvas { display: block; }
   const storyText = document.getElementById('story-text');
   const storyProgress = document.getElementById('story-progress');
   const storySkip = document.getElementById('story-skip');
-  const storyTrigger = document.getElementById('story-trigger');
 
   let storyActive = false;
   let storyIndex = 0;
@@ -1182,7 +1165,6 @@ canvas { display: block; }
     storyIndex = 0;
     storyCorruption = 0;
     storyOverlay.classList.add('active');
-    storyTrigger.style.display = 'none';
     initAudio();
     showStoryParagraph(0);
   }
@@ -1258,24 +1240,31 @@ canvas { display: block; }
     setTimeout(() => {
       storyOverlay.classList.remove('active');
       storyActive = false;
-      storyTrigger.style.display = 'block';
-      // Trigger massive jumpscare
-      trigger('face');
-      setTimeout(() => trigger('figure'), 300);
-      setTimeout(() => trigger('face'), 800);
-      screenShake(20);
+      // The monster comes
+      drawFigure(faceCanvas.width, faceCanvas.height);
+      faceCanvas.classList.add('active');
+      screenShake(25);
       flashNow('#fff');
       playScareSound();
       playScareSound('noise');
+      whisper('i never left');
       addBlood();
       document.getElementById('blood-overlay').classList.add('active');
-      setTimeout(() => document.getElementById('blood-overlay').classList.remove('active'), 4000);
-      whisper('i never left');
-      bsod();
+
+      // Figure stays for 3 full seconds
+      setTimeout(() => {
+        faceCanvas.classList.remove('active');
+        document.getElementById('blood-overlay').classList.remove('active');
+        // Then face jumpscare as a final hit
+        setTimeout(() => trigger('face'), 500);
+        bsod();
+      }, 3000);
     }, 2000);
   }
 
-  storyTrigger.addEventListener('click', startStory);
+  // Auto-start story after entering
+  setTimeout(startStory, 1500);
+
   storySkip.addEventListener('click', () => {
     if (storyTimer) clearTimeout(storyTimer);
     if (storyActive) endStory();
