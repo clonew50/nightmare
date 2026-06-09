@@ -1017,11 +1017,11 @@ canvas { display: block; }
     onAnyInteraction();
   });
 
-  document.addEventListener('keydown', () => {
-    keys++; onAnyInteraction();
-    if (keys === 10) { trigger('face'); popup({t:'it can hear you', b:'every keystroke is a heartbeat.', btn:'...', danger:true}); }
-    if (keys === 20) bsod();
-    if (keys > 5 && keys % 7 === 0) { trigger('staticjump'); flashNow('#fff'); screenShake(8); }
+  document.addEventListener('keydown', (e) => {
+    // Only respond to specific scary keys, ignore normal typing
+    if (e.key === 'Escape' || e.key === 'F12') return;
+    // Silently count but never punish typing - that's annoying
+    onAnyInteraction();
   });
 
   // Mouse move for desktop cursor trail
