@@ -875,7 +875,7 @@ canvas { display: block; }
   const storyProgress = document.getElementById('story-progress');
   const storySkip = document.getElementById('story-skip');
 
-  let storyActive = false, storyIndex = 0, storyTimer = null, storyCorruption = 0;
+  let storyActive = false, storyIndex = 0, storyTimer = null, storyCorruption = 0, storyMorphTimer = null;
 
   function startStory() {
     if (storyActive) return;
@@ -893,6 +893,7 @@ canvas { display: block; }
     let text = STORY[idx];
     const corruptionLevel = Math.floor(idx/2);
 
+    // Initial batch of replacements
     for (let r = 0; r < Math.min(corruptionLevel+1, REPLACEMENTS.length); r++) {
       const rule = REPLACEMENTS[r];
       if (Math.random() < 0.75) {
@@ -908,27 +909,71 @@ canvas { display: block; }
         return ch;
       }).join('');
     }
-    const words = text.split(' ');
-    storyText.innerHTML = words.map((w, i) => {
-      if (corruptionLevel > 2 && Math.random() < 0.03*corruptionLevel) return `<span class="glitched">${w}</span>`;
-      if (corruptionLevel > 0 && Math.random() < 0.04*(corruptionLevel+1)) return `<span class="corrupted">${w}</span>`;
-      return w;
-    }).join(' ');
+    renderStoryText(text, corruptionLevel);
 
     if (corruptionLevel > 4) screenShake(3);
     if (corruptionLevel > 7) flashNow('#000');
 
+    // LIVE WORD MORPHING - words change while you read
+    let morphRound = 0;
+    if (storyMorphTimer) clearInterval(storyMorphTimer);
+    storyMorphTimer = setInterval(() => {
+      morphRound++;
+      // Get current displayed text from the DOM
+      let currentText = storyText.textContent || storyText.innerText || text;
+      // Apply 1-3 more replacements
+      const replacementsThisRound = Math.min(1 + Math.floor(corruptionLevel/2), 4);
+      for (let m = 0; m < replacementsThisRound; m++) {
+        const rIdx = Math.floor(Math.random() * Math.min(corruptionLevel+1, REPLACEMENTS.length));
+        const rule = REPLACEMENTS[rIdx];
+        const replacement = rule.to[Math.floor(Math.random()*rule.to.length)];
+        currentText = currentText.replace(rule.from, replacement);
+      }
+      // Occasionally corrupt a letter
+      if (corruptionLevel > 3 && Math.random() < 0.3) {
+        currentText = currentText.split('').map(ch => {
+          if (ch.match(/[a-zA-Z]/) && Math.random() < 0.02*(corruptionLevel-2)) {
+            const c = String.fromCharCode(ch.charCodeAt(0)+(Math.random()>0.5?1:-1));
+            return /[a-zA-Z]/.test(c) ? c : ch;
+          }
+          return ch;
+        }).join('');
+      }
+      // More aggressive morphing as time passes
+      if (morphRound > 3 && corruptionLevel > 2) {
+        for (let m = 0; m < 2; m++) {
+          const rIdx = Math.floor(Math.random() * Math.min(corruptionLevel+2, REPLACEMENTS.length));
+          const rule = REPLACEMENTS[rIdx];
+          currentText = currentText.replace(rule.from, () => rule.to[Math.floor(Math.random()*rule.to.length)]);
+        }
+      }
+      renderStoryText(currentText, corruptionLevel + Math.floor(morphRound/2));
+    }, 2000 + Math.random()*2000);
+
     const delay = Math.max(3500, 10000 - corruptionLevel * 400);
     if (storyTimer) clearTimeout(storyTimer);
-    storyTimer = setTimeout(() => showStoryParagraph(idx+1), delay);
+    storyTimer = setTimeout(() => {
+      if (storyMorphTimer) clearInterval(storyMorphTimer);
+      showStoryParagraph(idx+1);
+    }, delay);
 
     if (Math.random() > 0.6) whisper('keep reading');
     if (Math.random() > 0.7) whisper('don\'t stop');
     if (corruptionLevel > 5) { playScareSound(); vibrate(100); }
   }
 
+  function renderStoryText(text, corruptionLevel) {
+    const words = text.split(' ');
+    storyText.innerHTML = words.map((w, i) => {
+      if (corruptionLevel > 2 && Math.random() < 0.03*corruptionLevel) return `<span class="glitched">${w}</span>`;
+      if (corruptionLevel > 0 && Math.random() < 0.04*(corruptionLevel+1)) return `<span class="corrupted">${w}</span>`;
+      return w;
+    }).join(' ');
+  }
+
   function endStory() {
     if (storyTimer) clearTimeout(storyTimer);
+    if (storyMorphTimer) clearInterval(storyMorphTimer);
     storyText.style.color = '#4a1010';
     storyText.innerHTML = 'It\'s right behind you. It has always been right behind you.';
     storyProgress.style.width = '100%';
