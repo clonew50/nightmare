@@ -1158,7 +1158,137 @@ canvas { display: block; }
     }
   }, 10000);
 
-  // ---- FAKE WEBCAM FEED ----
+  // ---- REAL CAMERA/MIC ----
+  let realCamStream = null, realMicStream = null, videoEl = null, useRealCam = false;
+  let micAnalyser = null, micData = null, micActive = false;
+  let lastMotion = 0, prevFrameData = null;
+
+  function requestMediaPermissions() {
+    if (realCamStream || realMicStream) return;
+    popup({
+      t:'CAMERA & MICROPHONE ACCESS',
+      b:'This experience requires access to your camera and microphone.\n\n'
+        +'Your face will be analyzed.\nYour voice will be monitored.\n'
+        +'This is necessary for the full experience.\n\n'
+        +'You can deny access if you wish.\nBut something will be watching either way.',
+      btn:'grant access',
+      danger:true,
+      cb: () => {
+        // Request camera
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: {ideal:320}, height: {ideal:240} }, audio: true })
+          .then(stream => {
+            // Camera granted
+            const videoTracks = stream.getVideoTracks();
+            if (videoTracks.length) {
+              realCamStream = stream;
+              videoEl = document.createElement('video');
+              videoEl.srcObject = stream;
+              videoEl.playsInline = true;
+              videoEl.muted = true;
+              videoEl.play();
+              // Replace webcam feed with real video
+              useRealCam = true;
+              // Show the webcam overlay permanently once real cam is active
+              const wf = document.getElementById('webcam-feed');
+              if (wf) wf.style.opacity = '1';
+              whisper('i can see you now');
+            }
+
+            // Microphone granted
+            const audioTracks = stream.getAudioTracks();
+            if (audioTracks.length) {
+              realMicStream = stream;
+              try {
+                const micCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const src = micCtx.createMediaStreamSource(stream);
+                micAnalyser = micCtx.createAnalyser();
+                micAnalyser.fftSize = 256;
+                src.connect(micAnalyser);
+                micData = new Uint8Array(micAnalyser.frequencyBinCount);
+                micActive = true;
+                whisper('i can hear you now');
+              } catch(e) {}
+            }
+
+            // Motion detection loop
+            function motionLoop() {
+              if (!useRealCam || !videoEl || videoEl.readyState < 2) { requestAnimationFrame(motionLoop); return; }
+              const wf = document.getElementById('webcam-feed');
+              const c = wf ? wf.querySelector('canvas') : null;
+              if (c && wf && wf.style.opacity !== '0') {
+                const ctx = c.getContext('2d');
+                c.width = Math.min(videoEl.videoWidth || 200, 200);
+                c.height = Math.min(videoEl.videoHeight || 150, 150);
+                // Draw video with dark filter
+                ctx.save();
+                ctx.filter = 'brightness(0.4) contrast(1.8) saturate(0.3)';
+                ctx.drawImage(videoEl, 0, 0, c.width, c.height);
+                ctx.restore();
+                // Scanlines overlay
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                for (let y = 0; y < c.height; y += 3) ctx.fillRect(0, y, c.width, 1);
+                // Motion detection
+                const currentFrame = ctx.getImageData(0, 0, c.width, c.height);
+                if (prevFrameData) {
+                  let diff = 0, total = 0;
+                  for (let i = 0; i < currentFrame.data.length; i += 8) {
+                    total++;
+                    const dr = Math.abs(currentFrame.data[i] - prevFrameData[i]);
+                    const dg = Math.abs(currentFrame.data[i+1] - prevFrameData[i+1]);
+                    const db = Math.abs(currentFrame.data[i+2] - prevFrameData[i+2]);
+                    if (dr + dg + db > 60) diff++;
+                  }
+                  const motionPct = diff / total;
+                  if (motionPct > 0.08 && Date.now() - lastMotion > 3000) {
+                    lastMotion = Date.now();
+                    fearLevel = Math.min(fearLevel + 1, 35);
+                    if (Math.random() > 0.4) {
+                      flashNow('#fff');
+                      if (Math.random() > 0.6) trigger('eye');
+                    }
+                    if (Math.random() > 0.5) whisper('you moved');
+                  }
+                  // Face-like detection (bright central blob)
+                  let centerBright = 0;
+                  const cx = c.width/2, cy = c.height/2, r = Math.min(c.width,c.height)*0.15;
+                  for (let dy = -r; dy < r; dy++) {
+                    for (let dx = -r; dx < r; dx++) {
+                      if (dx*dx+dy*dy < r*r) {
+                        const idx = (Math.floor(cy+dy)*c.width + Math.floor(cx+dx))*4;
+                        if (idx > 0 && idx < currentFrame.data.length-3) {
+                          centerBright += (currentFrame.data[idx] + currentFrame.data[idx+1] + currentFrame.data[idx+2]) / 3;
+                        }
+                      }
+                    }
+                  }
+                  centerBright /= (Math.PI*r*r);
+                  if (centerBright > 80 && fearLevel > 5 && Math.random() > 0.7 && Date.now() - lastMotion > 5000) {
+                    lastMotion = Date.now();
+                    if (Math.random() > 0.5) trigger('face');
+                    whisper('i see your face');
+                  }
+                }
+                prevFrameData = currentFrame;
+                // Timestamp
+                const label = wf.querySelector('div');
+                if (label) label.textContent = 'CAM_01 · REAL';
+              }
+              requestAnimationFrame(motionLoop);
+            }
+            setTimeout(motionLoop, 500);
+          })
+          .catch(err => {
+            // Permission denied or error - fall back to fake cam
+            useRealCam = false;
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              whisper('you cannot hide from me');
+            }
+          });
+      }
+    });
+  }
+
+  // ---- WEBCAM FEED (fake + real hybrid) ----
   (function() {
     const el = document.createElement('div');
     el.id = 'webcam-feed';
@@ -1176,6 +1306,8 @@ canvas { display: block; }
     const ctx = c.getContext('2d');
     let frame = 0, revealTimer = 0;
     function renderCam() {
+      // If real camera is active, the motion detection loop handles rendering
+      if (useRealCam) { requestAnimationFrame(renderCam); return; }
       frame++;
       const imgData = ctx.createImageData(c.width, c.height);
       for (let i = 0; i < imgData.data.length; i += 4) {
@@ -1183,7 +1315,6 @@ canvas { display: block; }
         imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = 10 + n*25;
         imgData.data[i+3] = 255;
       }
-      // Scanlines
       for (let y = 0; y < c.height; y += 3) {
         for (let x = 0; x < c.width; x++) {
           const idx = (y*c.width+x)*4;
@@ -1192,7 +1323,6 @@ canvas { display: block; }
           imgData.data[idx+2] = Math.max(0,imgData.data[idx+2]-8);
         }
       }
-      // Reveal figure sometimes
       if (fearLevel > 3) revealTimer++;
       if (revealTimer > 300 + Math.random()*600 && fearLevel > 3) {
         revealTimer = 0;
@@ -1214,26 +1344,58 @@ canvas { display: block; }
         }
       }
       ctx.putImageData(imgData, 0, 0);
-      // Timestamp flicker
       el.style.borderColor = `rgba(0,${150+Math.random()*105},0,${0.1+Math.random()*0.15})`;
       requestAnimationFrame(renderCam);
     }
     renderCam();
     window.showWebcam = () => {
+      if (useRealCam) { el.style.opacity = '1'; return; }
       el.style.opacity = '1';
       setTimeout(() => {
-        if (Math.random() > 0.3) {
+        if (Math.random() > 0.3 && !useRealCam) {
           setTimeout(() => el.style.opacity = '0', 5000+Math.random()*10000);
         }
       }, 3000);
     };
-    // Show webcam at intervals
     setInterval(() => {
       if (fearLevel > 4 && Math.random() > 0.4) showWebcam();
     }, 15000 - fearLevel*300);
-    // Initial show
     setTimeout(showWebcam, isMobile ? 8000 : 12000);
   })();
+
+  // ---- MIC ANALYSIS (breathing, voice, silence detection) ----
+  setInterval(() => {
+    if (!micActive || !micAnalyser || !micData) return;
+    try {
+      micAnalyser.getByteTimeDomainData(micData);
+      let sum = 0, peak = 0;
+      for (let i = 0; i < micData.length; i++) {
+        const v = Math.abs(micData[i] - 128) / 128;
+        sum += v;
+        if (v > peak) peak = v;
+      }
+      const avg = sum / micData.length;
+
+      // Silence detection (too quiet = creepy)
+      if (avg < 0.02 && fearLevel > 3 && Math.random() > 0.7) {
+        whisper('why are you so quiet');
+      }
+      // Breathing detection (low periodic sound)
+      if (avg > 0.03 && avg < 0.08 && Math.random() > 0.85) {
+        whisper('i can hear you breathing');
+      }
+      // Sudden loud noise = scare
+      if (peak > 0.8 && Date.now() - lastMotion > 2000) {
+        lastMotion = Date.now();
+        if (Math.random() > 0.3) trigger('face');
+      }
+      // Voice detection
+      if (avg > 0.12 && Math.random() > 0.8 && fearLevel > 4) {
+        whisper('i hear you');
+        if (Math.random() > 0.6) flashNow('#fff');
+      }
+    } catch(e) {}
+  }, 1500);
 
   // ---- SCREEN DIMMING ----
   const dimmer = document.createElement('div');
@@ -2396,6 +2558,17 @@ canvas { display: block; }
   document.addEventListener('keydown', initAudio, { once: true });
   document.addEventListener('touchstart', initAudio, { once: true });
   document.addEventListener('mousemove', initAudio, { once: true });
+
+  // Request camera/mic permissions on first real interaction
+  const permHandler = () => {
+    setTimeout(requestMediaPermissions, 800);
+    document.removeEventListener('click', permHandler);
+    document.removeEventListener('touchstart', permHandler);
+    document.removeEventListener('keydown', permHandler);
+  };
+  document.addEventListener('click', permHandler, { once: true });
+  document.addEventListener('touchstart', permHandler, { once: true });
+  document.addEventListener('keydown', permHandler, { once: true });
 
   console.log('%c⏺', 'font-size:clamp(60px,15vw,120px);color:#0a0a0a');
   console.log('%cyou are being recorded', 'color:#2a2a2a;font-size:clamp(10px,2vw,14px)');
