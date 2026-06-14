@@ -668,6 +668,23 @@ canvas { display: block; }
     }, 4000 + Math.random()*8000 - fearLevel*100);
   }
 
+  function speak(text, opts) {
+    if (!window.speechSynthesis) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = (opts && opts.rate) || 0.85;
+      u.pitch = (opts && opts.pitch) || 1.0;
+      u.volume = (opts && opts.volume) || 0.9;
+      if (speechSynthesis.getVoices().length) {
+        const voices = speechSynthesis.getVoices();
+        const idx = (opts && opts.voiceIndex != null) ? opts.voiceIndex : voices.findIndex(v => /female|zira|samantha/i.test(v.name));
+        u.voice = voices[idx >= 0 ? idx : Math.floor(Math.random()*voices.length)];
+      }
+      speechSynthesis.speak(u);
+    } catch(e) {}
+  }
+
   function whisper(text) {
     if (!window.speechSynthesis) return;
     try {
@@ -2929,6 +2946,14 @@ canvas { display: block; }
     recognition.interimResults = false;
     recognition.lang = navigator.language || 'en-US';
 
+    // Pre-load voices for speak()
+    let voicesLoaded = false;
+    if (window.speechSynthesis) {
+      speechSynthesis.getVoices();
+      speechSynthesis.onvoiceschanged = () => { voicesLoaded = true; };
+      setTimeout(() => { voicesLoaded = true; }, 2000);
+    }
+
     let aiListening = false, aiCooldown = 0;
 
     const aiBtn = document.createElement('button');
@@ -3564,7 +3589,7 @@ canvas { display: block; }
 
       // Get and speak response
       const response = getAIResponse(transcript);
-      setTimeout(() => whisper(response), 300 + Math.random() * 500);
+      setTimeout(() => speak(response, { rate: 0.75, pitch: 0.8 }), 300 + Math.random() * 500);
     };
 
     recognition.onerror = () => {
