@@ -480,6 +480,7 @@ canvas { display: block; }
     scheduleLullaby();
     scheduleSting();
     scheduleHallucinations();
+    startFeedback();
     audioReady = true;
   }
 
@@ -1156,6 +1157,306 @@ canvas { display: block; }
       document.body.appendChild(ct);
     }
   }, 10000);
+
+  // ---- FAKE WEBCAM FEED ----
+  (function() {
+    const el = document.createElement('div');
+    el.id = 'webcam-feed';
+    el.style.cssText = `position:fixed;bottom:clamp(10px,2vh,20px);right:clamp(10px,2vw,20px);
+      width:clamp(120px,25vw,200px);height:clamp(90px,18vw,150px);z-index:15;
+      border:2px solid rgba(0,255,0,0.15);background:#000;overflow:hidden;
+      font-family:monospace;font-size:clamp(7px,1vw,9px);color:rgba(0,255,0,0.2);
+      box-shadow:0 0 20px rgba(0,0,0,0.8);opacity:0;transition:opacity 2s;pointer-events:none;`;
+    el.innerHTML = '<div style="position:absolute;bottom:2px;left:4px;">CAM_01</div>';
+    document.body.appendChild(el);
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 150;
+    c.style.cssText = 'width:100%;height:100%;display:block;';
+    el.prepend(c);
+    const ctx = c.getContext('2d');
+    let frame = 0, revealTimer = 0;
+    function renderCam() {
+      frame++;
+      const imgData = ctx.createImageData(c.width, c.height);
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const n = Math.random();
+        imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = 10 + n*25;
+        imgData.data[i+3] = 255;
+      }
+      // Scanlines
+      for (let y = 0; y < c.height; y += 3) {
+        for (let x = 0; x < c.width; x++) {
+          const idx = (y*c.width+x)*4;
+          imgData.data[idx] = Math.max(0, imgData.data[idx]-8);
+          imgData.data[idx+1] = Math.max(0,imgData.data[idx+1]-8);
+          imgData.data[idx+2] = Math.max(0,imgData.data[idx+2]-8);
+        }
+      }
+      // Reveal figure sometimes
+      if (fearLevel > 3) revealTimer++;
+      if (revealTimer > 300 + Math.random()*600 && fearLevel > 3) {
+        revealTimer = 0;
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          const x = (i/4)%c.width, y = Math.floor((i/4)/c.width);
+          const cx = c.width/2, cy = c.height*0.4;
+          const dx = (x-cx)/c.width, dy = (y-cy)/c.height;
+          const dist = Math.sqrt(dx*dx+dy*dy);
+          if (dist < 0.3 && Math.random() > 0.4) {
+            imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = 0;
+          }
+          if (dist < 0.15 && Math.random() > 0.3) {
+            const glow = Math.random()*8;
+            imgData.data[i] = glow; imgData.data[i+1] = glow*0.5; imgData.data[i+2] = glow*0.3;
+          }
+        }
+        if (fearLevel > 8) {
+          setTimeout(() => { if (Math.random()>0.5) { flashNow('#fff'); playScareSound(); } }, 200);
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      // Timestamp flicker
+      el.style.borderColor = `rgba(0,${150+Math.random()*105},0,${0.1+Math.random()*0.15})`;
+      requestAnimationFrame(renderCam);
+    }
+    renderCam();
+    window.showWebcam = () => {
+      el.style.opacity = '1';
+      setTimeout(() => {
+        if (Math.random() > 0.3) {
+          setTimeout(() => el.style.opacity = '0', 5000+Math.random()*10000);
+        }
+      }, 3000);
+    };
+    // Show webcam at intervals
+    setInterval(() => {
+      if (fearLevel > 4 && Math.random() > 0.4) showWebcam();
+    }, 15000 - fearLevel*300);
+    // Initial show
+    setTimeout(showWebcam, isMobile ? 8000 : 12000);
+  })();
+
+  // ---- SCREEN DIMMING ----
+  const dimmer = document.createElement('div');
+  dimmer.style.cssText = `position:fixed;inset:0;z-index:97;pointer-events:none;
+    background:rgba(0,0,0,0);transition:background 5s ease;`;
+  document.body.appendChild(dimmer);
+  setInterval(() => {
+    if (fearLevel > 2) {
+      const dim = Math.min(0.7, (fearLevel-2) * 0.025);
+      dimmer.style.background = `rgba(0,0,0,${dim})`;
+    }
+    if (fearLevel > 15 && Math.random() > 0.8) {
+      dimmer.style.transition = 'background 0.3s';
+      dimmer.style.background = 'rgba(0,0,0,0.85)';
+      setTimeout(() => { dimmer.style.transition = 'background 5s'; }, 500);
+    }
+  }, 5000);
+
+  // ---- FAKE NOTIFICATIONS ----
+  const NOTIFS = [
+    {t:'Security Alert', b:'Unknown device connected to your network', d:true},
+    {t:'Camera Access', b:'An application is using your camera', d:true},
+    {t:'Microphone', b:'Your microphone is active', d:false},
+    {t:'System Warning', b:'Critical process may be compromised', d:true},
+    {t:'Motion Detected', b:'Something moved in the other room', d:true},
+    {t:'iCloud Alert', b:'Your account was accessed from an unknown location', d:true},
+    {t:'Screen Recording', b:'This page is recording your screen', d:false},
+    {t:'Bluetooth', b:'An unknown device wants to pair with your phone', d:true},
+    {t:'Face ID', b:'Multiple unrecognized faces detected', d:true},
+  ];
+  function showNotification() {
+    const n = NOTIFS[Math.floor(Math.random()*NOTIFS.length)];
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:clamp(10px,3vh,20px);right:clamp(10px,2vw,20px);
+      z-index:50;background:rgba(20,20,28,0.95);border:1px solid ${n.d?'rgba(120,30,30,0.5)':'rgba(50,50,60,0.5)'};
+      border-radius:clamp(8px,1.5vw,12px);padding:clamp(10px,2vw,16px);
+      max-width:min(320px,85vw);font-family:system-ui,-apple-system,sans-serif;
+      box-shadow:0 4px 30px rgba(0,0,0,0.6);opacity:0;transform:translateY(-20px);
+      transition:all 0.4s ease;pointer-events:none;`;
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${n.d?'#7a2020':'#404060'};flex-shrink:0;"></span>
+      <span style="font-size:clamp(11px,1.8vw,13px);color:#808098;">${n.t}</span>
+    </div>
+    <div style="font-size:clamp(12px,2vw,14px);color:#b0b0c0;padding-left:16px;line-height:1.4;">${n.b}</div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+    setTimeout(() => {
+      el.style.opacity = '0'; el.style.transform = 'translateY(-20px)';
+      setTimeout(() => el.remove(), 500);
+    }, 3000 + Math.random()*2000);
+  }
+  setInterval(() => {
+    if (fearLevel > 5 && Math.random() > 0.5) showNotification();
+  }, 12000 - fearLevel*150);
+
+  // ---- GHOST TYPING ----
+  const GHOST_TEXTS = [
+    "i can see you", "you shouldn't be here", "it's too late for you",
+    "they're coming", "i'm inside your walls", "don't trust this page",
+    "it knows your name", "get out while you can", "you're already dead",
+    "there's someone behind you", "i've been watching you", "run"
+  ];
+  setInterval(() => {
+    if (fearLevel > 4 && Math.random() > 0.6) {
+      const gt = document.createElement('div');
+      const msg = GHOST_TEXTS[Math.floor(Math.random()*GHOST_TEXTS.length)];
+      gt.style.cssText = `position:fixed;left:clamp(10px,3vw,30px);bottom:clamp(60px,8vh,100px);
+        z-index:5;font-family:monospace;font-size:clamp(13px,2.5vw,16px);
+        color:rgba(60,50,50,0.08);pointer-events:none;white-space:pre;`;
+      document.body.appendChild(gt);
+      let i = 0;
+      const iv = setInterval(() => {
+        gt.textContent += msg[i];
+        i++;
+        if (i >= msg.length) {
+          clearInterval(iv);
+          setTimeout(() => {
+            gt.style.transition = 'opacity 3s';
+            gt.style.opacity = '0';
+            setTimeout(() => gt.remove(), 3000);
+          }, 1500);
+        }
+      }, 50 + Math.random()*100);
+    }
+  }, 15000);
+
+  // ---- COUNTDOWN ----
+  setInterval(() => {
+    if (fearLevel > 6 && Math.random() > 0.7 && !document.querySelector('.countdown-el')) {
+      const cd = document.createElement('div');
+      cd.className = 'countdown-el';
+      let num = 5 + Math.floor(Math.random()*11);
+      cd.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+        z-index:30;font-family:monospace;font-size:clamp(60px,15vw,120px);
+        color:rgba(60,50,50,0.1);pointer-events:none;font-weight:bold;`;
+      document.body.appendChild(cd);
+      const iv = setInterval(() => {
+        cd.textContent = num;
+        if (num <= 0) {
+          clearInterval(iv);
+          cd.style.transition = 'opacity 1s';
+          cd.style.opacity = '0';
+          setTimeout(() => cd.remove(), 1000);
+          if (Math.random() > 0.4) trigger('face');
+          flashNow('#fff');
+          playScareSound();
+        }
+        num--;
+      }, 1000);
+    }
+  }, 25000);
+
+  // ---- SCREEN CRACK ----
+  (function() {
+    const crackCanvas = document.createElement('canvas');
+    crackCanvas.id = 'crack-overlay';
+    crackCanvas.style.cssText = `position:fixed;inset:0;z-index:96;pointer-events:none;opacity:0;transition:opacity 3s;`;
+    document.body.prepend(crackCanvas);
+    function drawCrack() {
+      const w = crackCanvas.width = window.innerWidth;
+      const h = crackCanvas.height = window.innerHeight;
+      const ctx = crackCanvas.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      ctx.strokeStyle = 'rgba(200,200,200,0.15)';
+      ctx.lineWidth = 0.5;
+      // Main crack from center
+      let x = w/2 + (Math.random()-0.5)*w*0.3;
+      let y = h/2 + (Math.random()-0.5)*h*0.3;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let i = 0; i < 30; i++) {
+        x += (Math.random()-0.5)*80;
+        y += (Math.random()-0.5)*60;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      // Branch cracks
+      for (let b = 0; b < 8; b++) {
+        let bx = w/2 + (Math.random()-0.5)*w*0.3;
+        let by = h/2 + (Math.random()-0.5)*h*0.3;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        for (let i = 0; i < 10; i++) {
+          bx += (Math.random()-0.5)*60;
+          by += (Math.random()-0.5)*50;
+          ctx.lineTo(bx, by);
+        }
+        ctx.stroke();
+      }
+      // Small impact point
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(w/2, h/2, 3+Math.random()*5, 0, Math.PI*2);
+      ctx.fill();
+      crackCanvas.style.opacity = '1';
+      setTimeout(() => {
+        crackCanvas.style.opacity = '0';
+        setTimeout(() => ctx.clearRect(0,0,w,h), 3000);
+      }, 300);
+    }
+    window.showCrack = drawCrack;
+  })();
+  setInterval(() => {
+    if (fearLevel > 7 && Math.random() > 0.7) showCrack();
+  }, 15000);
+
+  // ---- AUDIO FEEDBACK WHINE ----
+  let feedbackActive = false, feedbackInterval = null;
+  function startFeedback() {
+    if (!AC || feedbackActive) return;
+    feedbackActive = true;
+    try {
+      const o = AC.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = 2000;
+      const g = AC.createGain();
+      g.gain.value = 0;
+      const f = AC.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 5000;
+      const dist = AC.createWaveShaper();
+      const curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) curve[i] = ((Math.PI+100)*((i*2)/256-1))/(Math.PI+100*Math.abs((i*2)/256-1));
+      dist.curve = curve;
+      o.connect(f); f.connect(dist); dist.connect(g); g.connect(AC.destination);
+      o.start();
+      feedbackInterval = setInterval(() => {
+        if (fearLevel > 10) {
+          const vol = Math.min(0.04, (fearLevel-10)*0.003);
+          g.gain.setValueAtTime(vol, AC.currentTime);
+          o.frequency.setValueAtTime(1500 + fearLevel*80 + Math.random()*200, AC.currentTime);
+          f.frequency.setValueAtTime(2000 + fearLevel*150, AC.currentTime);
+        } else {
+          g.gain.setValueAtTime(0, AC.currentTime);
+        }
+        if (fearLevel > 20 && Math.random() > 0.8) {
+          g.gain.setValueAtTime(0.06, AC.currentTime);
+          setTimeout(() => g.gain.setValueAtTime(0.02, AC.currentTime), 200+Math.random()*400);
+        }
+      }, 500);
+    } catch(e) {}
+  }
+
+  // ---- MOTION DETECTED ----
+  const MOTION_MSGS = [
+    'MOTION DETECTED - KITCHEN', 'FACE DETECTED - UNKNOWN',
+    'MOTION DETECTED - HALLWAY', 'UNKNOWN DEVICE - PROXIMITY ALERT',
+    'MOTION DETECTED - BEDROOM', 'MULTIPLE FACES DETECTED',
+    'DOOR SENSOR - OPENED', 'WINDOW SENSOR - BROKEN'
+  ];
+  setInterval(() => {
+    if (fearLevel > 8 && Math.random() > 0.6) {
+      const mel = document.createElement('div');
+      mel.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+        z-index:25;font-family:monospace;font-size:clamp(16px,3vw,24px);
+        color:rgba(120,30,30,0.15);pointer-events:none;text-align:center;
+        letter-spacing:0.1em;`;
+      mel.textContent = MOTION_MSGS[Math.floor(Math.random()*MOTION_MSGS.length)];
+      document.body.appendChild(mel);
+      mel.style.transition = 'opacity 3s';
+      setTimeout(() => mel.style.opacity = '0', 2000);
+      setTimeout(() => mel.remove(), 5000);
+    }
+  }, 20000);
 
   // ---- INIT ----
   document.addEventListener('click', initAudio, { once: true });
