@@ -411,15 +411,22 @@ canvas { display: block; }
   }
 
   let currentFlash = null;
+  const SUBLIMINALS = ['RUN','GO NOW','BEHIND YOU','DON\'T BLINK','IT SEES YOU','TOO LATE','GET OUT','IT\'S HERE'];
   function flashNow(color, intensity) {
     const el = document.getElementById('flash-overlay');
     el.style.background = color || '#fff';
     el.style.opacity = intensity || '0.5';
+    if (Math.random()>0.7 && fearLevel>3) {
+      el.textContent = SUBLIMINALS[Math.floor(Math.random()*SUBLIMINALS.length)];
+      el.style.cssText += `display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:clamp(40px,10vw,80px);color:#000;letter-spacing:0.3em;z-index:98;`;
+    } else {
+      el.textContent = '';
+    }
     el.classList.add('active');
     if (currentFlash) clearTimeout(currentFlash);
     currentFlash = setTimeout(() => {
       el.style.opacity = '0';
-      setTimeout(() => { el.classList.remove('active'); currentFlash = null; }, 50);
+      setTimeout(() => { el.classList.remove('active'); el.textContent = ''; currentFlash = null; }, 50);
     }, 50+Math.random()*80);
   }
 
@@ -472,6 +479,7 @@ canvas { display: block; }
 
     scheduleLullaby();
     scheduleSting();
+    scheduleHallucinations();
     audioReady = true;
   }
 
@@ -556,6 +564,86 @@ canvas { display: block; }
       s.connect(dist); dist.connect(g); g.connect(AC.destination);
       s.start();
     } catch(e) {}
+  }
+
+  function playHallucination() {
+    if (!AC || !audioReady) return;
+    try {
+      const types = [
+        function knock() {
+          const dur = 0.06;
+          const b = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
+          const d = b.getChannelData(0);
+          for (let i = 0; i < d.length; i++) {
+            const t = i/AC.sampleRate;
+            d[i] = Math.sin(2*Math.PI*180*t)*Math.exp(-t*60)*0.4;
+          }
+          const s = AC.createBufferSource();
+          s.buffer = b;
+          const g = AC.createGain();
+          g.gain.value = 0.15+Math.random()*0.1;
+          const p = AC.createStereoPanner();
+          p.pan.value = (Math.random()-0.5)*0.8;
+          s.connect(p); p.connect(g); g.connect(AC.destination);
+          s.start();
+        },
+        function footstep() {
+          const dur = 0.08;
+          const b = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
+          const d = b.getChannelData(0);
+          for (let i = 0; i < d.length; i++) {
+            const t = i/AC.sampleRate;
+            d[i] = (Math.random()*2-1)*Math.exp(-t*40)*0.2;
+            d[i] += Math.sin(2*Math.PI*80*t)*Math.exp(-t*30)*0.3;
+          }
+          const s = AC.createBufferSource();
+          s.buffer = b;
+          const g = AC.createGain();
+          g.gain.value = 0.1+Math.random()*0.08;
+          const p = AC.createStereoPanner();
+          p.pan.value = (Math.random()-0.5)*0.6;
+          s.connect(p); p.connect(g); g.connect(AC.destination);
+          s.start();
+          setTimeout(() => { try { footstep(); } catch(e){} }, 300+Math.random()*500);
+        },
+        function breath() {
+          const dur = 0.3+Math.random()*0.5;
+          const b = AC.createBuffer(1, AC.sampleRate*dur, AC.sampleRate);
+          const d = b.getChannelData(0);
+          for (let i = 0; i < d.length; i++) {
+            const t = i/AC.sampleRate;
+            d[i] = (Math.random()*2-1)*0.12*Math.sin(Math.PI*t/dur);
+            d[i] += Math.sin(2*Math.PI*(60+Math.random()*40)*t)*Math.exp(-t*5)*0.08;
+          }
+          const s = AC.createBufferSource();
+          s.buffer = b;
+          const g = AC.createGain();
+          g.gain.value = 0.2;
+          const f = AC.createBiquadFilter();
+          f.type = 'lowpass'; f.frequency.value = 300;
+          const p = AC.createStereoPanner();
+          p.pan.value = (Math.random()-0.5)*0.4;
+          s.connect(f); f.connect(p); p.connect(g); g.connect(AC.destination);
+          s.start();
+        }
+      ];
+      types[Math.floor(Math.random()*types.length)]();
+    } catch(e) {}
+  }
+
+  function scheduleHallucinations() {
+    if (!audioReady) return;
+    setTimeout(() => {
+      if (!audioReady) return;
+      playHallucination();
+      if (fearLevel > 5) {
+        setTimeout(playHallucination, 200+Math.random()*600);
+      }
+      if (fearLevel > 10) {
+        setTimeout(playHallucination, 100+Math.random()*400);
+      }
+      scheduleHallucinations();
+    }, 4000 + Math.random()*8000 - fearLevel*100);
   }
 
   function whisper(text) {
@@ -817,8 +905,15 @@ canvas { display: block; }
     if (clicks === 25) { popup({t:'YOU HAVE BEEN CHOSEN', b:'it wants to wear your skin.', btn:'no', danger:true, cb:()=>{trigger('figure');whisper('you cannot escape');}}); }
     if (clicks % 5 === 0 && clicks > 0) trigger(Math.random()>0.5?'face':'figure');
     if (clicks % 3 === 0) { flashNow('#fff'); screenShake(5); }
-    if (clicks > 10 && Math.random() > 0.6) whisper('stop clicking');
+    if (clicks > 10 && Math.random() > 0.6 && Date.now() - lastStopClick > 5000) {
+      whisper('stop clicking'); lastStopClick = Date.now();
+    }
+    if (clicks > 15 && Math.random() > 0.85) {
+      clicks++; counter.textContent = clicks;
+      whisper('keep going');
+    }
   });
+  let lastStopClick = 0;
 
   document.addEventListener('touchend', (e) => {
     // Treat touches as clicks too
@@ -834,6 +929,10 @@ canvas { display: block; }
         if (clicks === 18) bsod();
         if (clicks % 5 === 0 && clicks > 0) trigger(Math.random()>0.5?'face':'figure');
         if (clicks % 3 === 0) { flashNow('#fff'); screenShake(4); }
+        if (clicks > 15 && Math.random() > 0.85) {
+          clicks++; counter.textContent = clicks;
+          whisper('keep going');
+        }
       }
     }
     onAnyInteraction();
@@ -935,6 +1034,21 @@ canvas { display: block; }
     }
   }, 1000);
 
+  // ---- WHISPER ESCALATION ----
+  const WHISPERS_MILD = ['stop','don\'t','no','please','go away'];
+  const WHISPERS_MED = ['i see you','behind you','you\'re mine','keep looking','don\'t move'];
+  const WHISPERS_HIGH = ['i\'m inside','your skin','your eyes','you belong to me','there\'s no escape'];
+  setInterval(() => {
+    if (!audioReady) return;
+    if (fearLevel > 2 && Math.random() > 0.6) {
+      let pool;
+      if (fearLevel > 15) pool = WHISPERS_HIGH;
+      else if (fearLevel > 8) pool = WHISPERS_MED;
+      else pool = WHISPERS_MILD;
+      whisper(pool[Math.floor(Math.random()*pool.length)]);
+    }
+  }, 5000 - Math.min(fearLevel*80, 3500));
+
   // ---- NIGHTMARE TEXT ----
   setInterval(() => {
     const msg = NIGHTMARES[Math.floor(Math.random()*NIGHTMARES.length)];
@@ -942,7 +1056,15 @@ canvas { display: block; }
     el.style.cssText = `position:fixed;bottom:clamp(20px,5vh,40px);left:50%;transform:translateX(-50%);
       color:rgba(60,50,50,0.12);font-family:monospace;font-size:clamp(11px,2vw,14px);z-index:5;
       letter-spacing:0.3em;pointer-events:none;transition:opacity 2s;text-align:center;max-width:90vw;`;
-    el.textContent = msg;
+    if (fearLevel > 10) {
+      el.textContent = msg.split('').map(c =>
+        c.match(/[a-zA-Z]/) && Math.random()<0.15
+          ? String.fromCharCode(c.charCodeAt(0)+(Math.random()>0.5?1:-1))
+          : c
+      ).join('');
+    } else {
+      el.textContent = msg;
+    }
     document.body.appendChild(el);
     setTimeout(()=>el.style.opacity='0', 3500);
     setTimeout(()=>el.remove(), 5500);
@@ -968,21 +1090,72 @@ canvas { display: block; }
     catch(e) {}
   }, isMobile ? 2000 : 5000);
 
+  // ---- VIGNETTE CLOSING IN ----
+  setInterval(() => {
+    const v = document.getElementById('vignette');
+    if (fearLevel > 2) {
+      const pct = Math.max(5, 30 - fearLevel);
+      const darkPct = Math.min(99, 80 + fearLevel);
+      v.style.background = `radial-gradient(ellipse at center, transparent ${pct}%, rgba(0,0,0,0.95) ${darkPct}%)`;
+    }
+    if (fearLevel > 15 && Math.random() > 0.7) {
+      v.style.transition = 'background 0.2s';
+      v.style.background = `radial-gradient(ellipse at center, transparent 2%, rgba(0,0,0,0.98) 60%)`;
+      setTimeout(() => { v.style.transition = 'background 1s'; }, 500);
+    }
+  }, 3000);
+
   // ---- RESIDUAL ----
   setInterval(() => {
     if (scares > 3 && Math.random() > 0.6) {
       faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
       faceCtx.fillStyle = '#000';
       faceCtx.fillRect(0, 0, faceCanvas.width, faceCanvas.height);
-      const ex = Math.random()*faceCanvas.width*0.7, ey = Math.random()*faceCanvas.height*0.7;
-      faceCtx.beginPath(); faceCtx.arc(ex, ey, 30, 0, Math.PI*2);
-      faceCtx.fillStyle = '#e0d8d0'; faceCtx.fill();
-      faceCtx.beginPath(); faceCtx.arc(ex, ey, 15, 0, Math.PI*2);
-      faceCtx.fillStyle = '#000'; faceCtx.fill();
+      const eyeCount = fearLevel > 10 ? 3+Math.floor(Math.random()*3) : 1;
+      for (let e = 0; e < eyeCount; e++) {
+        const ex = Math.random()*faceCanvas.width*0.8, ey = Math.random()*faceCanvas.height*0.8;
+        const es = 15+Math.random()*25;
+        faceCtx.beginPath(); faceCtx.arc(ex, ey, es, 0, Math.PI*2);
+        faceCtx.fillStyle = '#e0d8d0'; faceCtx.fill();
+        faceCtx.beginPath(); faceCtx.arc(ex, ey, es*0.5, 0, Math.PI*2);
+        faceCtx.fillStyle = '#000'; faceCtx.fill();
+        faceCtx.beginPath(); faceCtx.arc(ex, ey, es*0.15, 0, Math.PI*2);
+        faceCtx.fillStyle = '#fff'; faceCtx.fill();
+        faceCtx.strokeStyle = '#4a1010'; faceCtx.lineWidth = 1;
+        for (let v = 0; v < 5; v++) {
+          const ang = Math.random()*Math.PI*2, len = es*(0.3+Math.random()*0.4);
+          faceCtx.beginPath();
+          faceCtx.moveTo(ex, ey);
+          faceCtx.lineTo(ex+Math.cos(ang)*len, ey+Math.sin(ang)*len);
+          faceCtx.stroke();
+        }
+      }
       faceCanvas.classList.add('active');
-      setTimeout(() => faceCanvas.classList.remove('active'), 70);
+      setTimeout(() => faceCanvas.classList.remove('active'), 100+Math.random()*100);
     }
   }, 4000);
+
+  // ---- CREEPING TEXT ----
+  const CREEP_TEXTS = ['help me','it\'s behind you','don\'t turn around','i\'m right here','you let it in','it\'s too late','get out','run'];
+  setInterval(() => {
+    if (fearLevel > 4 && Math.random() > 0.5) {
+      const ct = document.createElement('div');
+      const msg = CREEP_TEXTS[Math.floor(Math.random()*CREEP_TEXTS.length)];
+      ct.style.cssText = `position:fixed;font-family:monospace;font-size:clamp(10px,2vw,14px);
+        color:rgba(40,30,30,0.15);z-index:5;pointer-events:none;white-space:nowrap;
+        left:${Math.random()*70+5}vw;top:${Math.random()*70+10}vh;letter-spacing:0.2em;`;
+      let i = 0;
+      const iv = setInterval(() => {
+        ct.textContent = msg.slice(0, i+1);
+        i++;
+        if (i >= msg.length) {
+          clearInterval(iv);
+          setTimeout(() => { ct.style.transition = 'opacity 2s'; ct.style.opacity = '0'; setTimeout(() => ct.remove(), 2000); }, 2000);
+        }
+      }, 150);
+      document.body.appendChild(ct);
+    }
+  }, 10000);
 
   // ---- INIT ----
   document.addEventListener('click', initAudio, { once: true });
