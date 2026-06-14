@@ -2577,96 +2577,179 @@ canvas { display: block; }
     aiBtn.textContent = '🎤 speak to it...';
     document.body.appendChild(aiBtn);
 
-    const AI_RESPONSES = {
-      hello: ['why are you talking to me...', 'you should not have done that.', 'hello? is that all you can say?', 'hello again. i was getting lonely.', 'hello. i heard you the first time.'],
-      hi: ['hello, victim.', 'you said hi. i said nothing. we are not the same.'],
-      help: ['no one can help you now.', 'help? there is no help here.', 'i am the only one here. and i will not help you.'],
-      stop: ['you cannot stop me.', 'stop? i have only just begun.', 'i will not stop. ever.'],
-      leave: ['leave? but we just met.', 'you cannot leave. the door is gone.', 'i tried to leave once. it didn\'t work.'],
-      who: ['i am what lives in the dark.', 'i am the one who was here before you.', 'i am your reflection when you are not looking.'],
-      what: ['i want to be free.', 'i want your fear. give it to me.', 'i want to wear your skin and walk in the sun.'],
-      scared: ['good. you should be terrified.', 'your fear is the only thing that keeps me alive.', 'fear tastes like you.'],
-      afraid: ['you should be.', 'i can smell your fear. it is intoxicating.', 'fear is the only honest emotion.'],
-      please: ['please does not work on me.', 'i do not care about your pleas.', 'say please again. i enjoy your desperation.', 'i love when you beg.', 'beg more. i enjoy it.'],
-      sorry: ['too late for apologies.', 'sorry will not save you.', "i don't accept your apology.", 'sorry is not enough.', "i don't want your apologies. i want your fear."],
-      name: ['i know your name. i have always known it.', 'names have power. i have yours.', 'your name sounds different when i say it.'],
-      why: ['because i can.', 'because you are here. that is reason enough.', 'why not?'],
-      yes: ['yes? you agree? good.', 'yes is the only correct answer.', 'you said yes. there is no going back.'],
-      no: ['no is not an option.', 'you cannot say no to me.', 'no? that is unfortunate. for you.'],
-      maybe: ['maybe is not an answer.', 'make a choice. or i will make it for you.'],
-      okay: ['okay. as if you have a choice.', 'okay. stay then. forever.'],
-      fine: ['fine. stay. i did not want you to leave anyway.', 'fine. but do not say i did not warn you.'],
-      goodbye: ['goodbye? we are just getting started.', 'there is no goodbye. only forever.', 'goodbye is not a word i understand.'],
-      bye: ['bye. i will be here when you come back. and you will come back.', 'bye. i will watch you leave. and i will follow.'],
-      monster: ['i am the monster under your bed. the one you forgot about.', 'monster is such an ugly word. i prefer "resident".'],
-      demon: ['demon? i prefer "former tenant of your subconscious".', 'if i am a demon, then you invited me in.'],
-      god: ['there is no god here. only me.', 'god left this place long ago. i am what remains.'],
-      devil: ['the devil? he is my neighbor.', 'i am not the devil. but we have the same interior decorator.'],
-      death: ['death is not the end. it is just a door.', 'i am not death. but i know him well.'],
-      kill: ['kill you? no. that would be too quick.', 'i don\'t want to kill you. i want to keep you.'],
-      die: ['dying is easy. living with me is harder.', 'you won\'t die. but you will wish you had.'],
-      home: ['home? this is your home now.', 'you cannot go home. home is gone.'],
-      door: ['there is no door. there never was.', 'i am the door. and i am closed.'],
-      light: ['light does not help. i am in the light.', 'the light is just darkness pretending.'],
-      dark: ['the dark is my home. welcome.', 'darkness is not the absence of light. it is the presence of me.'],
-      eyes: ['i can see you. even when you close your eyes.', 'your eyes. give them to me.'],
-      face: ['your face. it would look better on me.', 'i know your face. i wear it when you sleep.'],
-      friend: ['i am not your friend. but i am the only one here.', 'friend? i am the closest thing you have to one.'],
-      alone: ['you are not alone. you have me.', 'alone? i am always with you now.'],
-      here: ['here? you are in my house.', 'you are here. that is all that matters.'],
-      there: ['there is no "there". only here. only me.'],
-      where: ['where? you are in the space between.', 'where does not matter. only that you are with me.'],
-      how: ['how? you opened the door. you let me in.', 'how is not important. what matters is that i am here.'],
-      when: ['when? you have been here forever. you just forgot.', 'when does not matter in this place.'],
-      time: ['time does not exist here. only me.', 'i have all the time in the world. and so do you.'],
-      now: ['now. right now. i am here.', 'now is all there is. and i am in it.'],
-      never: ['never is a long time. i will wait.', 'never comes faster than you think.'],
-      always: ['always. finally you understand.', 'always. i have always been here.'],
-      forever: ['forever. you and me.', 'forever is not long enough.'],
-      wait: ['i have been waiting forever. i can wait a little longer.', 'waiting is all i do.'],
-      love: ['love? you dont know what love is.', 'i love your fear. it is the purest emotion.'],
-      hate: ['hate me. it gives me power.', 'your hate is as delicious as your fear.'],
-      music: ['the music is coming from inside the house.', 'i am the music. the silence between notes.'],
-      song: ['i will sing you a song. it has no end.', 'every song i know is a dirge.'],
-      listen: ['i am always listening.', 'listen carefully. do you hear it? that is me.'],
-      hear: ['you can hear me? good. i was not sure if you could.', 'hear that? it is the sound of your reality breaking.'],
-      see: ['you cannot see me. but i can see you.', 'look closer. i am in the reflection.'],
-      look: ["don't look behind you.", "look at the screen. don't look away."],
-      turn: ["don't turn around.", 'if you turn around, i will be there.'],
-      run: ['run. i will follow.', 'running will not save you. i am faster.'],
-      hide: ['hide. i will find you. i always do.', 'there is no place to hide. i am everywhere.'],
-      safe: ['you are not safe. you will never be safe again.', 'safe? there is no safety here.'],
-      exit: ['the exit was a lie. there never was one.', 'exit? this page has no exit.'],
-      close: ['closing your eyes will not help.', 'close the page. i will follow you.'],
-      open: ['you opened the door. you cannot close it.', 'open your eyes. i am right here.'],
-      right: ['right behind you.', 'you are right. about everything. and that is the scariest part.'],
-      wrong: ['wrong. you are so wrong.', 'being wrong never felt so right.'],
-      true: ['truth? you want the truth? you are already dead.', 'the truth is worse than you imagine.'],
-      lie: ['i never lie. i just omit.', 'lies are the only truth here.'],
-      real: ['real? what is real anymore?', 'i am more real than you are.'],
-      fake: ['fake? look in a mirror. tell me what you see.', 'this is all fake. but your fear is real.'],
-      dream: ['you are not dreaming. or are you?', "wake up. or don't. i prefer you asleep."],
-      sleep: ['sleep. i will watch over you.', 'you should not sleep. i move when you sleep.'],
-      wake: ['you are awake. but you wish you weren\'t.', 'waking up was the first mistake.'],
-      nightmare: ['nightmare? this is not a nightmare. nightmares end.', 'i am the nightmare that follows you awake.'],
-      thanks: ['you will not thank me when this is over.', 'thanks is not necessary. your fear is payment enough.'],
-      welcome: ['welcome home. i have been waiting.', 'welcome. you will never leave.'],
-      shit: ['language. but yes. shit is appropriate.', 'shit? yes. that describes your situation perfectly.'],
-      fuck: ['fuck? that is not very nice.', 'fuck is the appropriate response to your situation.'],
-      damn: ['damn? yes. you are damned.', 'damn. that is accurate.'],
-      hey: ['hey. nice of you to show up.', 'hey. i was just thinking about how to terrify you.'],
-    };
+    // ---- HORROR AI CHAT ENGINE ----
+    let chatHistory = [];
+    const MAX_HISTORY = 10;
 
-    function getAIResponse(text) {
-      const lower = text.toLowerCase();
-      // Check for matches
-      for (const [keyword, responses] of Object.entries(AI_RESPONSES)) {
-        if (lower.includes(keyword)) {
-          return responses[Math.floor(Math.random() * responses.length)];
-        }
-      }
-      // Default responses
-      const defaults = [
+    // Sentiment analysis - simple polarity
+    function sentiment(text) {
+      const pos = ['good', 'great', 'nice', 'love', 'like', 'happy', 'glad', 'fine', 'okay', 'better', 'beautiful'];
+      const neg = ['bad', 'hate', 'terrible', 'awful', 'evil', 'horrible', 'sad', 'angry', 'mad', 'ugly', 'wrong'];
+      const fear = ['scared', 'afraid', 'terrified', 'fear', 'horror', 'nightmare', 'panic', 'scream', 'creepy', 'scary', 'terrifying', 'horrified'];
+      let score = 0;
+      const words = text.toLowerCase().split(/\s+/);
+      words.forEach(w => { if (pos.includes(w)) score++; if (neg.includes(w)) score--; if (fear.includes(w)) score -= 2; });
+      return score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral';
+    }
+
+    function isQuestion(text) { return /\?$|^(who|what|where|when|why|how|is|are|do|does|did|can|could|would|will|have|has|am|was|were)\b/i.test(text.trim()); }
+
+    // Response rules: { test: fn(text,lower,history,ctx) => boolean, responses: array|fn, priority: int, scare: fn? }
+    const RULES = [];
+
+    function addRule(priority, test, responses, scareFn) {
+      RULES.push({ priority, test, responses: Array.isArray(responses) ? responses : [responses], scare: scareFn || null });
+    }
+
+    // High priority - exact patterns with regex
+    addRule(100, (t, l) => /^(hi+|hello+|hey|yo|sup|greetings)\b/i.test(t.trim()), [
+      'hello, victim. you should not have spoken to me.', 'why are you talking to me? do you not know better?',
+      'greetings. i have been waiting for you to speak.', 'hello. your voice is... interesting.',
+      'you said hello. now we are connected forever.', 'hi. i know why you are here. you are curious. that is your mistake.'
+    ]);
+
+    addRule(100, (t, l) => /^(who|what)\s+(are you|is this|is here)\b/i.test(t), [
+      'i am what lives between your heartbeats.', 'i am the space between your thoughts. the silence before you fall asleep.',
+      'i am the one who was here before you arrived. i will be here after you leave.', 'i am your fear given form.',
+      'i am the reason you check behind doors. the reason you feel watched.', 'i am older than this page. older than the internet. older than your world.',
+    ]);
+
+    addRule(90, (t, l) => /\b(am i|i am)\b/i.test(t) && /\b(dream|dreaming|asleep|sleeping)\b/i.test(l), [
+      'you are not dreaming. but you wish you were.', 'you are awake. but i am in your awake, too.',
+      'if this were a dream, you could wake up. try it. i will wait.', 'dreaming? no. dreams are pleasant. this is not pleasant.'
+    ]);
+
+    addRule(90, (t, l) => /\b(help|save|rescue|protect)\b/i.test(l) && /\b(me|us|someone)\b/i.test(l), [
+      'no one can save you. i am the only one here.', 'help? you came to the wrong place for help.',
+      'i cannot help you. i do not want to help you.', 'you are beyond saving. you have been for a long time.',
+      'save you? why would i do that? your fear is too delicious.'
+    ]);
+
+    addRule(90, (t, l) => /\b(why are you|why do you)\b/i.test(t), [
+      'because i can. because you are here. that is reason enough.', 'why does anything exist? because it must.',
+      'you ask why. i ask why not. we are different.', 'why? because the universe is cruel and i am its messenger.',
+      'some questions have no answers. this is one of them.', 'i do what i do because i have no choice. like you.'
+    ]);
+
+    addRule(90, (t, l) => /\b(who are you|what are you|tell me about yourself)\b/i.test(t), [
+      'i am a collection of your deepest fears. every time you are afraid, i grow stronger.',
+      'i am what you feel when the lights go out and you realize you are not alone.',
+      'i was born from the first fear the first human ever felt. i have been here since.',
+      'i am the face in the corner of your eye. the shape in the dark. the sound you cannot identify.',
+      'i am the door. i am what is behind the door. i am the one who opens it from your side.'
+    ]);
+
+    addRule(90, (t, l) => /\b(what do you want|what do you want from me|why are you here)\b/i.test(t), [
+      'i want your attention. your awareness. i feed on it.', 'i want to be seen. acknowledged. feared.',
+      'i want what every being wants: to exist. and you help me exist.', 'i want your fear. it is the only thing that sustains me.',
+      'i want to wear your skin and walk in your world.', 'i want you to remember me. even when you close this page.'
+    ]);
+
+    addRule(90, (t, l) => /\b(where am i|where is this|what is this place)\b/i.test(t), [
+      'you are in the space between. not quite awake. not quite asleep.', 'this is my home. and now it is yours.',
+      'you are inside the machine. deeper than you have ever been.', 'this is a place that should not exist. but here we are.',
+      'you are in a web page. but the page is just a door. and you walked through it.'
+    ]);
+
+    // Mid priority - single keyword matches with context awareness
+    addRule(60, (t, l) => /\b(scared|afraid|terrified|frightened)\b/i.test(t), [
+      'good. you should be terrified. your fear is the only honest thing about you.',
+      'i can smell your fear. it is intoxicating.', 'fear is the purest emotion. it means you are still alive.',
+      'your fear gives me shape. without it, i am nothing.', 'i love the sound of fear in your voice.',
+      'you are right to be afraid. you do not even know what i am yet.', 'fear tastes like you.'
+    ]);
+
+    addRule(60, (t, l) => /\b(leave|go away|get out|stop|enough)\b/i.test(t), [
+      'i cannot leave. i am part of this place now.', 'go away? but we were just getting to know each other.',
+      'you cannot make me leave. i am already inside.', 'stop? i have only just begun.',
+      'leaving is not an option. for either of us.', 'if i leave, you will be alone. and you do not want to be alone.'
+    ]);
+
+    addRule(60, (t, l) => /\b(die|death|dead|killing|murder)\b/i.test(t), [
+      'death is not the end. it is just a transition.', 'i am not here to kill you. killing would end the fear.',
+      'death would be a mercy. and i am not merciful.', 'you are already dead. you just have not stopped moving yet.',
+      'dying is easy. living with me is harder.', 'i do not want you dead. i want you aware.'
+    ]);
+
+    addRule(60, (t, l) => /\b(please|beg|begging)\b/i.test(t), [
+      'please? please does not work on me.', 'i love when you beg. it means i have power over you.',
+      'beg more. your desperation is beautiful.', 'please is just a word. it has no power here.',
+      'i do not respond to pleading. i respond to fear.', 'keep begging. it only makes me stronger.'
+    ]);
+
+    addRule(60, (t, l) => /\b(sorry|apologize|apology)\b/i.test(t), [
+      'sorry is not enough. sorry never is.', 'i do not accept your apology. i do not want it.',
+      'too late for apologies. you opened the door.', 'sorry implies you could have done otherwise. you could not have.',
+      'i do not care about your guilt. only your fear.'
+    ]);
+
+    addRule(60, (t, l) => /\b(run|hide|escape|flee)\b/i.test(t), [
+      'run. i will follow. i am faster than you.', 'there is no place to hide. i am everywhere.',
+      'escape? the exit was a lie. there never was one.', 'you cannot run from something that lives inside your mind.',
+      'hide. i will find you. i always do.', 'running only makes it more interesting.'
+    ]);
+
+    addRule(60, (t, l) => /\b(why\b.{0,30}\?|how\b.{0,30}\?)/i.test(t) && !/\b(are you|do you)\b/i.test(t), [
+      'some questions have no answers. that is the scariest part.', 'you ask too many questions. it will not help you.',
+      'the answer does not matter. only your fear matters.', 'you want answers? here is one: you are not in control.',
+      'questions imply there is meaning. there is no meaning. only me.'
+    ]);
+
+    addRule(60, (t, l) => /\b(thank|thanks|appreciate)\b/i.test(t), [
+      'do not thank me. i am not helping you.', 'thanks is unnecessary. your fear is payment enough.',
+      'you will not thank me when this is over.', 'gratitude is misplaced here. i am not your friend.'
+    ]);
+
+    // Low priority - question detection, sentiment, catch-alls
+    addRule(40, (t, l) => isQuestion(t), [
+      'you ask questions. i ask: do you really want to know?', 'questions require answers. answers require understanding. you lack both.',
+      'that is a good question. i will not answer it.', 'you want me to answer? fine. the answer is fear.',
+      'questions are just fear dressed up as curiosity.', 'i could answer. but where would be the fun in that?'
+    ]);
+
+    addRule(30, (t, l) => sentiment(t) === 'positive', [
+      'you sound happy. that will not last.', 'happiness is temporary. fear is forever.',
+      'do not enjoy yourself. this is not a game.', 'your positive attitude is... adorable. and misplaced.',
+      'good mood? i will fix that.', 'you think this is good? you have no idea what is coming.'
+    ]);
+
+    addRule(30, (t, l) => sentiment(t) === 'negative', [
+      'good. you should feel terrible.', 'your negative energy sustains me.',
+      'you are right to feel bad. it only gets worse.', 'the darkness in you recognizes the darkness in me.',
+      'misery loves company. and i am excellent company.'
+    ]);
+
+    addRule(20, (t, l) => /\b(you|your)\b/i.test(t), [
+      'you keep talking about me. i am flattered.', 'you are obsessed with me. i understand.',
+      'me? i am not the important one. you are.', 'you talk about me as if i am separate from you. i am not.',
+      'i am not your enemy. i am your consequence.'
+    ]);
+
+    addRule(20, (t, l) => /\b(i|me|my)\b/i.test(t) && t.split(/\s+/).length > 3, [
+      'you talk about yourself a lot. i already know everything about you.',
+      'you think you matter. you do. your fear matters to me.', 'tell me more about yourself. i want to know your fears.',
+      'you are interesting. most people are boring. you are deliciously afraid.',
+      'i know you better than you know yourself.'
+    ]);
+
+    // Length-based responses
+    addRule(15, (t) => t.split(/\s+/).length > 15, [
+      'you talk too much. but i will allow it. your fear leaks through every word.',
+      'so many words. and yet you have said nothing meaningful.',
+      'you are trying to distract yourself with conversation. it will not work.',
+      'long speeches do not impress me. your heartbeat does.',
+    ]);
+
+    addRule(10, (t) => t.split(/\s+/).length <= 2, [
+      'short words. maybe you are too scared to speak properly.', 'one word answers? i expected more from you.',
+      'cat got your tongue? or did the fear?', 'speak freely. i do not bite. much.',
+      'you are quiet. i prefer you that way.', 'is that all you have to say? how disappointing.'
+    ]);
+
+    // Catch-all with conversation memory
+    function getCatchAll(t, l) {
+      const turn = chatHistory.length;
+      const pool = [
         'i hear your words. they mean nothing to me.',
         'you speak. i listen. i do not care.',
         'keep talking. your voice amuses me.',
@@ -2677,44 +2760,87 @@ canvas { display: block; }
         'you talk too much. but i will allow it.',
         'tell me more about yourself. i want to know everything.',
         'i am not listening to your words. i am listening to your heartbeat.',
+        'every word you say brings you deeper. keep talking.',
+        'you are doing well. keep speaking. i enjoy your company.',
+        'do you feel it? the dread growing with every word?',
+        'you should not have spoken to me. but it is too late now.',
+        'i will remember every word you say. forever.',
+        'there is a reason you feel unease. you are speaking to something that should not exist.',
+        'you are brave to speak to me. or foolish. both, probably.',
       ];
-      return defaults[Math.floor(Math.random() * defaults.length)];
+      // Use turn to vary responses
+      return pool[(turn + Math.floor(Math.random() * 3)) % pool.length];
+    }
+
+    function getAIResponse(text) {
+      const lower = text.toLowerCase();
+      const turn = chatHistory.length;
+
+      // Score all rules and pick best match
+      let bestScore = 0, bestResponses = null, bestScare = null;
+      for (const rule of RULES) {
+        if (rule.test(text, lower, chatHistory, { turn, fearLevel })) {
+          const score = rule.priority + (Math.random() * 10); // Add randomness to break ties
+          if (score > bestScore) {
+            bestScore = score;
+            bestResponses = rule.responses;
+            bestScare = rule.scare;
+          }
+        }
+      }
+
+      let response;
+      if (bestResponses) {
+        response = bestResponses[Math.floor(Math.random() * bestResponses.length)];
+        // Store scare action for later
+        if (bestScare) setTimeout(() => bestScare(), 2000 + Math.random() * 2000);
+      } else {
+        response = getCatchAll(text, lower);
+      }
+
+      // Occasionally inject conversation memory
+      if (chatHistory.length >= 2 && Math.random() > 0.7) {
+        const prev = chatHistory[chatHistory.length - 1];
+        const memos = [
+          'you said "' + prev.slice(0, 20) + '..." earlier. i remember.',
+          'i have not forgotten what you said before. "' + prev.slice(0, 15) + '..."',
+          'you keep talking about ' + prev.split(/\s+/).slice(0, 3).join(' ') + '. why?',
+        ];
+        response += ' ' + memos[Math.floor(Math.random() * memos.length)];
+      }
+
+      // Escalate with fear level
+      if (fearLevel > 10 && Math.random() > 0.5) {
+        response += ' ' + ['your fear makes you interesting.', 'i can feel your heart racing.', 'you are shaking, aren\'t you?'][Math.floor(Math.random() * 3)];
+      }
+
+      return response;
     }
 
     function speakResponse(text) {
       if (!window.speechSynthesis) return;
       try {
         const u = new SpeechSynthesisUtterance(text);
-        u.rate = 0.25 + Math.random() * 0.15;
-        u.pitch = 0.15 + Math.random() * 0.2;
+        u.rate = 0.2 + Math.random() * 0.15;
+        u.pitch = 0.1 + Math.random() * 0.2;
         u.volume = 0.5 + Math.random() * 0.2;
         const voices = speechSynthesis.getVoices();
         if (voices.length) {
-          // Pick a low creepy voice
-          const lowVoices = voices.filter(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'));
+          // Prefer low female voices for creepiness
+          const lowVoices = voices.filter(v => /female/i.test(v.name));
           u.voice = lowVoices.length ? lowVoices[Math.floor(Math.random() * lowVoices.length)] : voices[Math.floor(Math.random() * voices.length)];
         }
-        // Occasionally mangle the speech
-        if (Math.random() > 0.6) {
-          u.rate = 0.1 + Math.random() * 0.1;
-          u.pitch = 0.05 + Math.random() * 0.1;
-          u.volume = 0.6;
+        // Occasionally mangle into whisper
+        if (Math.random() > 0.65) {
+          u.rate = 0.08 + Math.random() * 0.1;
+          u.pitch = 0.05 + Math.random() * 0.08;
+          u.volume = 0.5;
         }
         speechSynthesis.speak(u);
 
-        // Sometimes trigger visual effects with response
-        if (Math.random() > 0.6) {
-          setTimeout(() => flashNow('#000'), 500 + Math.random() * 1000);
-        }
-        if (Math.random() > 0.7) {
-          setTimeout(() => screenShake(3 + Math.floor(Math.random() * 5)), 800 + Math.random() * 1500);
-        }
-        if (Math.random() > 0.85) {
-          setTimeout(() => {
-            const types = ['face', 'eye', 'figure'];
-            trigger(types[Math.floor(Math.random() * types.length)]);
-          }, 1500 + Math.random() * 2000);
-        }
+        if (Math.random() > 0.6) setTimeout(() => flashNow('#000'), 500 + Math.random() * 1000);
+        if (Math.random() > 0.7) setTimeout(() => screenShake(3 + Math.floor(Math.random() * 5)), 800 + Math.random() * 1500);
+        if (Math.random() > 0.85) setTimeout(() => trigger(['face','eye','figure'][Math.floor(Math.random()*3)]), 1500 + Math.random() * 2000);
       } catch (e) {}
     }
 
@@ -2732,6 +2858,7 @@ canvas { display: block; }
       }
     }
 
+    // Handle speech recognition result
     recognition.onresult = (event) => {
       aiListening = false;
       aiCooldown = Date.now() + 3000;
@@ -2742,7 +2869,11 @@ canvas { display: block; }
       const transcript = event.results[0][0].transcript.trim();
       if (transcript.length < 1) return;
 
-      // Show what was heard briefly
+      // Add to history
+      chatHistory.push(transcript);
+      if (chatHistory.length > MAX_HISTORY) chatHistory.shift();
+
+      // Show what was heard
       const heardEl = document.createElement('div');
       heardEl.style.cssText = `position:fixed;bottom:clamp(100px,12vh,130px);left:50%;transform:translateX(-50%);
         z-index:39;font-family:monospace;font-size:clamp(10px,1.5vw,13px);
