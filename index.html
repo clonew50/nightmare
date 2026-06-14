@@ -102,8 +102,8 @@ canvas { display: block; }
 (function() {
   'use strict';
 
-  let AC = null, audioReady = false;
-  let clicks = 0, scares = 0;
+  let AC = null, audioReady = false, voicesLoaded = false;
+  let clicks = 0, scares = 0, lastStopClick = 0;
   let idleSec = 0, idleTimer = null, lastAction = Date.now();
   let scareCD = 0, fearLevel = 0;
   let bsodActive = false;
@@ -676,10 +676,12 @@ canvas { display: block; }
       u.rate = (opts && opts.rate) || 0.85;
       u.pitch = (opts && opts.pitch) || 1.0;
       u.volume = (opts && opts.volume) || 0.9;
-      if (speechSynthesis.getVoices().length) {
+      if (voicesLoaded || speechSynthesis.getVoices().length) {
         const voices = speechSynthesis.getVoices();
-        const idx = (opts && opts.voiceIndex != null) ? opts.voiceIndex : voices.findIndex(v => /female|zira|samantha/i.test(v.name));
-        u.voice = voices[idx >= 0 ? idx : Math.floor(Math.random()*voices.length)];
+        if (voices.length) {
+          const idx = (opts && opts.voiceIndex != null) ? opts.voiceIndex : voices.findIndex(v => /female|zira|samantha/i.test(v.name));
+          u.voice = voices[idx >= 0 && idx < voices.length ? idx : Math.floor(Math.random()*voices.length)];
+        }
       }
       speechSynthesis.speak(u);
     } catch(e) {}
@@ -692,8 +694,10 @@ canvas { display: block; }
       u.rate = 0.3+Math.random()*0.2;
       u.pitch = 0.2+Math.random()*0.3;
       u.volume = 0.3+Math.random()*0.2;
-      const voices = speechSynthesis.getVoices();
-      if (voices.length) u.voice = voices[Math.floor(Math.random()*voices.length)];
+      if (voicesLoaded || speechSynthesis.getVoices().length) {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length) u.voice = voices[Math.floor(Math.random()*voices.length)];
+      }
       speechSynthesis.speak(u);
     } catch(e) {}
   }
@@ -952,7 +956,6 @@ canvas { display: block; }
       whisper('keep going');
     }
   });
-  let lastStopClick = 0;
 
   document.addEventListener('touchend', (e) => {
     // Treat touches as clicks too
@@ -984,9 +987,9 @@ canvas { display: block; }
     onAnyInteraction();
   });
 
-  // Mouse move for desktop cursor trail
+  // Mouse move for desktop cursor trail (skip on touch devices)
   const trail = [];
-  for (let i = 0; i < 40; i++) {
+  if (!isMobile) for (let i = 0; i < 40; i++) {
     const d = document.createElement('div');
     d.style.cssText = `position:fixed;pointer-events:none;z-index:6;border-radius:50%;
       width:${4-i*0.07}px;height:${4-i*0.07}px;background:rgba(80,70,70,${0.3-i*0.007});
@@ -1207,7 +1210,7 @@ canvas { display: block; }
 
   // ---- REAL CAMERA/MIC ----
   let realCamStream = null, realMicStream = null, videoEl = null, useRealCam = false;
-  let micAnalyser = null, micData = null, micActive = false;
+  let micAnalyser = null, micData = null, micActive = false, micCtx = null;
   let lastMotion = 0, prevFrameData = null;
 
   function requestMediaPermissions() {
@@ -1260,7 +1263,7 @@ canvas { display: block; }
             if (audioTracks.length) {
               realMicStream = stream;
               try {
-                const micCtx = new (window.AudioContext || window.webkitAudioContext)();
+                micCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (micCtx.state === 'suspended') micCtx.resume().catch(() => {});
                 const src = micCtx.createMediaStreamSource(stream);
                 micAnalyser = micCtx.createAnalyser();
@@ -1621,18 +1624,18 @@ canvas { display: block; }
     window.showCrack = drawCrack;
   })();
   setInterval(() => {
-    if (fearLevel > 7 && Math.random() > 0.7) showCrack();
+    if (fearLevel > 7 && Math.random() > 0.7 && typeof showCrack === 'function') showCrack();
   }, 15000);
 
   // ---- AUDIO FEEDBACK WHINE ----
-  let feedbackActive = false, feedbackInterval = null;
+  let feedbackActive = false, feedbackInterval = null, feedbackOsc = null;
   function startFeedback() {
     if (!AC || feedbackActive) return;
     feedbackActive = true;
     try {
-      const o = AC.createOscillator();
-      o.type = 'sawtooth';
-      o.frequency.value = 2000;
+      feedbackOsc = AC.createOscillator();
+      feedbackOsc.type = 'sawtooth';
+      feedbackOsc.frequency.value = 2000;
       const g = AC.createGain();
       g.gain.value = 0;
       const f = AC.createBiquadFilter();
@@ -1641,13 +1644,13 @@ canvas { display: block; }
       const curve = new Float32Array(256);
       for (let i = 0; i < 256; i++) curve[i] = ((Math.PI+100)*((i*2)/256-1))/(Math.PI+100*Math.abs((i*2)/256-1));
       dist.curve = curve;
-      o.connect(f); f.connect(dist); dist.connect(g); g.connect(AC.destination);
-      o.start();
+      feedbackOsc.connect(f); f.connect(dist); dist.connect(g); g.connect(AC.destination);
+      feedbackOsc.start();
       feedbackInterval = setInterval(() => {
         if (fearLevel > 10) {
           const vol = Math.min(0.04, (fearLevel-10)*0.003);
           g.gain.setValueAtTime(vol, AC.currentTime);
-          o.frequency.setValueAtTime(1500 + fearLevel*80 + Math.random()*200, AC.currentTime);
+          feedbackOsc.frequency.setValueAtTime(1500 + fearLevel*80 + Math.random()*200, AC.currentTime);
           f.frequency.setValueAtTime(2000 + fearLevel*150, AC.currentTime);
         } else {
           g.gain.setValueAtTime(0, AC.currentTime);
@@ -1658,6 +1661,15 @@ canvas { display: block; }
         }
       }, 500);
     } catch(e) {}
+  }
+  function stopFeedback() {
+    try {
+      if (feedbackInterval) clearInterval(feedbackInterval);
+      if (feedbackOsc) { feedbackOsc.stop(); feedbackOsc.disconnect(); }
+    } catch(e) {}
+    feedbackActive = false;
+    feedbackInterval = null;
+    feedbackOsc = null;
   }
 
   // ---- MOTION DETECTED ----
@@ -2947,11 +2959,11 @@ canvas { display: block; }
     recognition.lang = navigator.language || 'en-US';
 
     // Pre-load voices for speak()
-    let voicesLoaded = false;
-    if (window.speechSynthesis) {
+    if (window.speechSynthesis && !voicesLoaded) {
       speechSynthesis.getVoices();
       speechSynthesis.onvoiceschanged = () => { voicesLoaded = true; };
-      setTimeout(() => { voicesLoaded = true; }, 2000);
+      if (speechSynthesis.getVoices().length) voicesLoaded = true;
+      setTimeout(() => { voicesLoaded = true; }, 3000);
     }
 
     let aiListening = false, aiCooldown = 0;
@@ -3635,6 +3647,21 @@ canvas { display: block; }
     if (typeof realCamStream !== 'undefined' && realCamStream) {
       realCamStream.getTracks().forEach(t => t.stop());
     }
+    if (typeof realMicStream !== 'undefined' && realMicStream && realMicStream !== realCamStream) {
+      realMicStream.getTracks().forEach(t => t.stop());
+    }
+    if (micCtx && typeof micCtx.close === 'function') {
+      try { micCtx.close(); } catch(e) {}
+    }
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.srcObject = null;
+      videoEl.load();
+    }
+    if (audioReady && AC && typeof AC.close === 'function') {
+      try { AC.close(); } catch(e) {}
+    }
+    stopFeedback();
   });
 
   // ---- INIT ----
