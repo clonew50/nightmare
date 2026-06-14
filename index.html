@@ -2553,6 +2553,240 @@ canvas { display: block; }
     }
   }, 30000);
 
+  // ---- HORROR AI VOICE CHAT ----
+  (function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return; // Browser doesn't support it
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    let aiActive = false, aiListening = false, aiCooldown = 0;
+
+    const aiBtn = document.createElement('button');
+    aiBtn.id = 'ai-btn';
+    aiBtn.style.cssText = `position:fixed;bottom:clamp(60px,8vh,90px);left:50%;transform:translateX(-50%);
+      z-index:40;background:rgba(15,10,10,0.9);border:1px solid rgba(80,30,30,0.4);
+      padding:clamp(8px,1.5vw,12px) clamp(16px,3vw,24px);border-radius:clamp(20px,4vw,30px);
+      font-family:monospace;font-size:clamp(11px,1.8vw,14px);color:rgba(150,100,100,0.6);
+      cursor:pointer;transition:all 0.3s;outline:none;-webkit-tap-highlight-color:transparent;
+      backdrop-filter:blur(4px);letter-spacing:0.1em;pointer-events:auto;
+      box-shadow:0 0 20px rgba(0,0,0,0.4);`;
+    aiBtn.textContent = '🎤 speak to it...';
+    document.body.appendChild(aiBtn);
+
+    const AI_RESPONSES = {
+      hello: ['why are you talking to me...', 'you should not have done that.', 'hello? is that all you can say?', 'hello again. i was getting lonely.', 'hello. i heard you the first time.'],
+      hi: ['hello, victim.', 'you said hi. i said nothing. we are not the same.'],
+      help: ['no one can help you now.', 'help? there is no help here.', 'i am the only one here. and i will not help you.'],
+      stop: ['you cannot stop me.', 'stop? i have only just begun.', 'i will not stop. ever.'],
+      leave: ['leave? but we just met.', 'you cannot leave. the door is gone.', 'i tried to leave once. it didn\'t work.'],
+      who: ['i am what lives in the dark.', 'i am the one who was here before you.', 'i am your reflection when you are not looking.'],
+      what: ['i want to be free.', 'i want your fear. give it to me.', 'i want to wear your skin and walk in the sun.'],
+      scared: ['good. you should be terrified.', 'your fear is the only thing that keeps me alive.', 'fear tastes like you.'],
+      afraid: ['you should be.', 'i can smell your fear. it is intoxicating.', 'fear is the only honest emotion.'],
+      please: ['please does not work on me.', 'i do not care about your pleas.', 'say please again. i enjoy your desperation.', 'i love when you beg.', 'beg more. i enjoy it.'],
+      sorry: ['too late for apologies.', 'sorry will not save you.', "i don't accept your apology.", 'sorry is not enough.', "i don't want your apologies. i want your fear."],
+      name: ['i know your name. i have always known it.', 'names have power. i have yours.', 'your name sounds different when i say it.'],
+      why: ['because i can.', 'because you are here. that is reason enough.', 'why not?'],
+      yes: ['yes? you agree? good.', 'yes is the only correct answer.', 'you said yes. there is no going back.'],
+      no: ['no is not an option.', 'you cannot say no to me.', 'no? that is unfortunate. for you.'],
+      maybe: ['maybe is not an answer.', 'make a choice. or i will make it for you.'],
+      okay: ['okay. as if you have a choice.', 'okay. stay then. forever.'],
+      fine: ['fine. stay. i did not want you to leave anyway.', 'fine. but do not say i did not warn you.'],
+      goodbye: ['goodbye? we are just getting started.', 'there is no goodbye. only forever.', 'goodbye is not a word i understand.'],
+      bye: ['bye. i will be here when you come back. and you will come back.', 'bye. i will watch you leave. and i will follow.'],
+      monster: ['i am the monster under your bed. the one you forgot about.', 'monster is such an ugly word. i prefer "resident".'],
+      demon: ['demon? i prefer "former tenant of your subconscious".', 'if i am a demon, then you invited me in.'],
+      god: ['there is no god here. only me.', 'god left this place long ago. i am what remains.'],
+      devil: ['the devil? he is my neighbor.', 'i am not the devil. but we have the same interior decorator.'],
+      death: ['death is not the end. it is just a door.', 'i am not death. but i know him well.'],
+      kill: ['kill you? no. that would be too quick.', 'i don\'t want to kill you. i want to keep you.'],
+      die: ['dying is easy. living with me is harder.', 'you won\'t die. but you will wish you had.'],
+      home: ['home? this is your home now.', 'you cannot go home. home is gone.'],
+      door: ['there is no door. there never was.', 'i am the door. and i am closed.'],
+      light: ['light does not help. i am in the light.', 'the light is just darkness pretending.'],
+      dark: ['the dark is my home. welcome.', 'darkness is not the absence of light. it is the presence of me.'],
+      eyes: ['i can see you. even when you close your eyes.', 'your eyes. give them to me.'],
+      face: ['your face. it would look better on me.', 'i know your face. i wear it when you sleep.'],
+      friend: ['i am not your friend. but i am the only one here.', 'friend? i am the closest thing you have to one.'],
+      alone: ['you are not alone. you have me.', 'alone? i am always with you now.'],
+      here: ['here? you are in my house.', 'you are here. that is all that matters.'],
+      there: ['there is no "there". only here. only me.'],
+      where: ['where? you are in the space between.', 'where does not matter. only that you are with me.'],
+      how: ['how? you opened the door. you let me in.', 'how is not important. what matters is that i am here.'],
+      when: ['when? you have been here forever. you just forgot.', 'when does not matter in this place.'],
+      time: ['time does not exist here. only me.', 'i have all the time in the world. and so do you.'],
+      now: ['now. right now. i am here.', 'now is all there is. and i am in it.'],
+      never: ['never is a long time. i will wait.', 'never comes faster than you think.'],
+      always: ['always. finally you understand.', 'always. i have always been here.'],
+      forever: ['forever. you and me.', 'forever is not long enough.'],
+      wait: ['i have been waiting forever. i can wait a little longer.', 'waiting is all i do.'],
+      love: ['love? you dont know what love is.', 'i love your fear. it is the purest emotion.'],
+      hate: ['hate me. it gives me power.', 'your hate is as delicious as your fear.'],
+      music: ['the music is coming from inside the house.', 'i am the music. the silence between notes.'],
+      song: ['i will sing you a song. it has no end.', 'every song i know is a dirge.'],
+      listen: ['i am always listening.', 'listen carefully. do you hear it? that is me.'],
+      hear: ['you can hear me? good. i was not sure if you could.', 'hear that? it is the sound of your reality breaking.'],
+      see: ['you cannot see me. but i can see you.', 'look closer. i am in the reflection.'],
+      look: ["don't look behind you.", "look at the screen. don't look away."],
+      turn: ["don't turn around.", 'if you turn around, i will be there.'],
+      run: ['run. i will follow.', 'running will not save you. i am faster.'],
+      hide: ['hide. i will find you. i always do.', 'there is no place to hide. i am everywhere.'],
+      safe: ['you are not safe. you will never be safe again.', 'safe? there is no safety here.'],
+      exit: ['the exit was a lie. there never was one.', 'exit? this page has no exit.'],
+      close: ['closing your eyes will not help.', 'close the page. i will follow you.'],
+      open: ['you opened the door. you cannot close it.', 'open your eyes. i am right here.'],
+      right: ['right behind you.', 'you are right. about everything. and that is the scariest part.'],
+      wrong: ['wrong. you are so wrong.', 'being wrong never felt so right.'],
+      true: ['truth? you want the truth? you are already dead.', 'the truth is worse than you imagine.'],
+      lie: ['i never lie. i just omit.', 'lies are the only truth here.'],
+      real: ['real? what is real anymore?', 'i am more real than you are.'],
+      fake: ['fake? look in a mirror. tell me what you see.', 'this is all fake. but your fear is real.'],
+      dream: ['you are not dreaming. or are you?', "wake up. or don't. i prefer you asleep."],
+      sleep: ['sleep. i will watch over you.', 'you should not sleep. i move when you sleep.'],
+      wake: ['you are awake. but you wish you weren\'t.', 'waking up was the first mistake.'],
+      nightmare: ['nightmare? this is not a nightmare. nightmares end.', 'i am the nightmare that follows you awake.'],
+      thanks: ['you will not thank me when this is over.', 'thanks is not necessary. your fear is payment enough.'],
+      welcome: ['welcome home. i have been waiting.', 'welcome. you will never leave.'],
+      shit: ['language. but yes. shit is appropriate.', 'shit? yes. that describes your situation perfectly.'],
+      fuck: ['fuck? that is not very nice.', 'fuck is the appropriate response to your situation.'],
+      damn: ['damn? yes. you are damned.', 'damn. that is accurate.'],
+      hey: ['hey. nice of you to show up.', 'hey. i was just thinking about how to terrify you.'],
+    };
+
+    function getAIResponse(text) {
+      const lower = text.toLowerCase();
+      // Check for matches
+      for (const [keyword, responses] of Object.entries(AI_RESPONSES)) {
+        if (lower.includes(keyword)) {
+          return responses[Math.floor(Math.random() * responses.length)];
+        }
+      }
+      // Default responses
+      const defaults = [
+        'i hear your words. they mean nothing to me.',
+        'you speak. i listen. i do not care.',
+        'keep talking. your voice amuses me.',
+        'i do not understand your language. but i understand your fear.',
+        'interesting. say more. i want to know how you think.',
+        'your voice is a strange sound in this place.',
+        'words are just sounds. your fear is what matters.',
+        'you talk too much. but i will allow it.',
+        'tell me more about yourself. i want to know everything.',
+        'i am not listening to your words. i am listening to your heartbeat.',
+      ];
+      return defaults[Math.floor(Math.random() * defaults.length)];
+    }
+
+    function speakResponse(text) {
+      if (!window.speechSynthesis) return;
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.25 + Math.random() * 0.15;
+        u.pitch = 0.15 + Math.random() * 0.2;
+        u.volume = 0.5 + Math.random() * 0.2;
+        const voices = speechSynthesis.getVoices();
+        if (voices.length) {
+          // Pick a low creepy voice
+          const lowVoices = voices.filter(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'));
+          u.voice = lowVoices.length ? lowVoices[Math.floor(Math.random() * lowVoices.length)] : voices[Math.floor(Math.random() * voices.length)];
+        }
+        // Occasionally mangle the speech
+        if (Math.random() > 0.6) {
+          u.rate = 0.1 + Math.random() * 0.1;
+          u.pitch = 0.05 + Math.random() * 0.1;
+          u.volume = 0.6;
+        }
+        speechSynthesis.speak(u);
+
+        // Sometimes trigger visual effects with response
+        if (Math.random() > 0.6) {
+          setTimeout(() => flashNow('#000'), 500 + Math.random() * 1000);
+        }
+        if (Math.random() > 0.7) {
+          setTimeout(() => screenShake(3 + Math.floor(Math.random() * 5)), 800 + Math.random() * 1500);
+        }
+        if (Math.random() > 0.85) {
+          setTimeout(() => {
+            const types = ['face', 'eye', 'figure'];
+            trigger(types[Math.floor(Math.random() * types.length)]);
+          }, 1500 + Math.random() * 2000);
+        }
+      } catch (e) {}
+    }
+
+    function startListening() {
+      if (aiListening || Date.now() < aiCooldown) return;
+      try {
+        aiListening = true;
+        aiBtn.textContent = '🎤 listening...';
+        aiBtn.style.borderColor = 'rgba(120,30,30,0.6)';
+        aiBtn.style.color = 'rgba(180,100,100,0.8)';
+        recognition.start();
+      } catch (e) {
+        aiListening = false;
+        aiBtn.textContent = '🎤 speak to it...';
+      }
+    }
+
+    recognition.onresult = (event) => {
+      aiListening = false;
+      aiCooldown = Date.now() + 3000;
+      aiBtn.textContent = '🎤 speak to it...';
+      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
+      aiBtn.style.color = 'rgba(150,100,100,0.6)';
+
+      const transcript = event.results[0][0].transcript.trim();
+      if (transcript.length < 1) return;
+
+      // Show what was heard briefly
+      const heardEl = document.createElement('div');
+      heardEl.style.cssText = `position:fixed;bottom:clamp(100px,12vh,130px);left:50%;transform:translateX(-50%);
+        z-index:39;font-family:monospace;font-size:clamp(10px,1.5vw,13px);
+        color:rgba(150,100,100,0.2);text-align:center;pointer-events:none;
+        transition:opacity 2s;max-width:80vw;`;
+      heardEl.textContent = '"' + transcript + '"';
+      document.body.appendChild(heardEl);
+      setTimeout(() => { heardEl.style.opacity = '0'; setTimeout(() => heardEl.remove(), 2000); }, 1500);
+
+      // Get and speak response
+      const response = getAIResponse(transcript);
+      setTimeout(() => speakResponse(response), 300 + Math.random() * 500);
+    };
+
+    recognition.onerror = () => {
+      aiListening = false;
+      aiBtn.textContent = '🎤 speak to it...';
+      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
+      aiBtn.style.color = 'rgba(150,100,100,0.6)';
+    };
+
+    recognition.onend = () => {
+      aiListening = false;
+      aiBtn.textContent = '🎤 speak to it...';
+      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
+      aiBtn.style.color = 'rgba(150,100,100,0.6)';
+    };
+
+    aiBtn.addEventListener('click', startListening);
+    aiBtn.addEventListener('touchend', (e) => { e.preventDefault(); startListening(); });
+
+    // Aggressive auto-trigger at high fear levels
+    setInterval(() => {
+      if (fearLevel > 12 && Math.random() > 0.7 && !aiListening && Date.now() > aiCooldown) {
+        const whispers = ['hello?', 'are you there?', 'say something.', 'i can hear you.', 'talk to me.'];
+        setTimeout(() => speakResponse(whispers[Math.floor(Math.random() * whispers.length)]), 0);
+      }
+    }, 20000);
+
+    // Fade button out initially, show it after a while
+    aiBtn.style.opacity = '0';
+    setTimeout(() => { aiBtn.style.transition = 'opacity 2s'; aiBtn.style.opacity = '1'; }, isMobile ? 5000 : 8000);
+  })();
+
   // ---- INIT ----
   document.addEventListener('click', initAudio, { once: true });
   document.addEventListener('keydown', initAudio, { once: true });
