@@ -3673,6 +3673,312 @@ canvas { display: block; }
     }, 12000);
   })();
 
+  // ---- FAKE SYSTEM UPDATE ----
+  (function() {
+    const eulaLines = [
+      'By continuing, you surrender all rights to...',
+      'REALITY ANCHOR SOFTWARE LICENSE AGREEMENT',
+      'Section 4.2: Your consciousness may be sublicensed',
+      'Section 7.1: You grant us permanent access to',
+      '  your neural patterns, memories, and fears.',
+      'Section 12: This software cannot be uninstalled.',
+      'Do you accept? (you have no choice)',
+    ];
+    let updEl = null;
+    function showUpdate() {
+      if (document.getElementById('fake-update')) return;
+      updEl = document.createElement('div');
+      updEl.id = 'fake-update';
+      updEl.style.cssText = `position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.97);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        font-family:system-ui;padding:5vw;color:#ccc;font-size:clamp(10px,1.6vw,13px);`;
+      const lines = [];
+      for (let i = 0; i < 4; i++) {
+        lines.push(`<div style="opacity:0;margin:2px 0;text-align:center;color:rgba(200,200,200,0.15)">${eulaLines[Math.floor(Math.random() * eulaLines.length)]}</div>`);
+      }
+      let prog = 0;
+      updEl.innerHTML = `
+        <div style="margin-bottom:20px;font-size:clamp(14px,2.5vw,20px);color:rgba(200,200,200,0.3);">Installing security update...</div>
+        <div style="width:clamp(200px,50vw,400px);height:clamp(8px,1.5vw,12px);background:rgba(200,200,200,0.1);border-radius:2px;overflow:hidden;">
+          <div id="upd-bar" style="height:100%;width:0;background:linear-gradient(90deg,rgba(0,120,200,0.3),rgba(0,200,100,0.2));transition:width 3s linear;"></div>
+        </div>
+        <div id="upd-pct" style="margin-top:8px;font-size:clamp(10px,1.4vw,12px);color:rgba(200,200,200,0.2);">0%</div>
+        <div id="eula-container" style="margin-top:30px;max-width:clamp(250px,60vw,500px);">
+          ${lines.map(l => `<div style="opacity:0.15;margin:3px 0;text-align:center;font-size:clamp(8px,1.2vw,11px);color:rgba(200,200,200,0.1);">${l}</div>`).join('')}
+        </div>
+        <div style="margin-top:30px;opacity:0.08;font-size:clamp(8px,1.2vw,10px);">
+          <p>NOT RESPONSIBLE FOR ANY LOSS OF SANITY</p>
+          <p>ALL RIGHTS RESERVED. YOUR RIGHTS ARE REVOKED.</p>
+        </div>`;
+      document.body.appendChild(updEl);
+      const bar = document.getElementById('upd-bar');
+      const pct = document.getElementById('upd-pct');
+      const iv = setInterval(() => {
+        prog += Math.random() * 2;
+        if (prog > 99.5) prog = 99.5;
+        bar.style.width = prog + '%';
+        pct.textContent = Math.floor(prog) + '%';
+        if (prog > 95) {
+          // Stutter behavior
+          bar.style.transition = 'width 10s linear';
+          setTimeout(() => { bar.style.transition = 'width 3s linear'; }, 2000);
+        }
+      }, 2000);
+      // Never completes — that's the horror
+    }
+    setTimeout(() => { if (fearLevel > 3) showUpdate(); }, 30000 + Math.random() * 15000);
+    setInterval(() => {
+      if (fearLevel > 6 && Math.random() > 0.7 && !document.getElementById('fake-update')) showUpdate();
+    }, 40000);
+  })();
+
+  // ---- SELF-PHOTO GALLERY ----
+  (function() {
+    const snapshots = [];
+    function capture() {
+      if (snapshots.length > 8) return; // cap at 8
+      const v = document.querySelector('video');
+      if (!v || !v.videoWidth) return;
+      const c = document.createElement('canvas');
+      c.width = 160; c.height = 120;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0, 160, 120);
+      snapshots.push({ data: c.toDataURL(), time: Date.now() });
+    }
+    function showGallery() {
+      if (snapshots.length === 0) return;
+      const existing = document.getElementById('snap-gallery');
+      if (existing) existing.remove();
+      const el = document.createElement('div');
+      el.id = 'snap-gallery';
+      el.style.cssText = `position:fixed;inset:0;z-index:89;background:rgba(0,0,0,0.95);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        font-family:system-ui;padding:5vw;`;
+      let html = `<div style="font-size:clamp(10px,1.6vw,12px);color:rgba(200,200,200,0.2);margin-bottom:15px;">CAPTURES — ${snapshots.length} files</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-width:500px;">`;
+      for (const s of snapshots) {
+        const d = new Date(s.time);
+        html += `<div style="text-align:center;">
+          <img src="${s.data}" style="width:100%;aspect-ratio:4/3;object-fit:cover;opacity:0.6;filter:grayscale(0.8);"/>
+          <div style="font-size:clamp(7px,1vw,9px);color:rgba(200,200,200,0.15);margin-top:4px;">${d.toLocaleTimeString()}</div>
+        </div>`;
+      }
+      html += '</div>';
+      html += `<div style="margin-top:20px;font-size:clamp(9px,1.3vw,11px);color:rgba(200,100,100,0.2);">auto-uploaded ✓</div>`;
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => el.style.opacity = '1');
+      setTimeout(() => { if (el.parentNode) { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); } }, 6000);
+    }
+    // Capture when camera is active
+    setInterval(() => {
+      if (fearLevel > 3 && Math.random() > 0.6) { capture(); }
+    }, 15000);
+    // Show gallery periodically
+    setInterval(() => {
+      if (fearLevel > 5 && snapshots.length > 0 && Math.random() > 0.6) showGallery();
+    }, 35000);
+  })();
+
+  // ---- FAKE FILE BROWSER ----
+  (function() {
+    const files = [
+      'C:\\Users\\User\\AppData\\Roaming\\nightmare\\',
+      '  reality_anchor.exe — 1,024 KB',
+      '  fear_index.dat — 64 KB [modified: just now]',
+      '  webcam_capture_01.avi — 8,192 KB',
+      '  victim_log.txt — 12 KB',
+      '  analysis_pending.exe — 4,096 KB',
+      '  neural_map.dat — 12,800 KB',
+      '  C:\\Windows\\System32\\drivers\\etc\\',
+      '  hosts [redirecting all traffic]',
+      '  C:\\Users\\User\\Desktop\\',
+      '  dont_open.html — 1 KB',
+      '  help_me.txt — 0 KB [empty]',
+    ];
+    let fe = null;
+    function showFileBrowser() {
+      if (document.getElementById('fake-explorer')) return;
+      fe = document.createElement('div');
+      fe.id = 'fake-explorer';
+      fe.style.cssText = `position:fixed;bottom:clamp(5px,2vh,15px);right:clamp(5px,2vw,15px);
+        width:clamp(220px,40vw,320px);z-index:88;background:rgba(5,5,15,0.97);
+        border:1px solid rgba(200,200,200,0.08);border-radius:4px;font-family:monospace;
+        font-size:clamp(9px,1.3vw,11px);color:rgba(200,200,200,0.15);
+        pointer-events:none;padding:clamp(6px,1vw,10px);
+        box-shadow:0 0 30px rgba(0,0,0,0.8);`;
+      let html = `<div style="border-bottom:1px solid rgba(200,200,200,0.05);padding-bottom:4px;margin-bottom:6px;
+        font-size:clamp(7px,1vw,9px);color:rgba(200,200,200,0.1);">📁 File Explorer</div>`;
+      html += files.slice(0, 4 + Math.floor(Math.random() * 4)).map(f => {
+        const isDir = f.endsWith('\\');
+        return `<div style="padding:1px 0;${isDir?'color:rgba(180,200,255,0.12);font-weight:bold':''}">${f}</div>`;
+      }).join('');
+      fe.innerHTML = html;
+      document.body.appendChild(fe);
+      setTimeout(() => { if (fe && fe.parentNode) fe.remove(); }, 8000 + Math.random() * 6000);
+    }
+    setInterval(() => {
+      if (fearLevel > 4 && Math.random() > 0.65) showFileBrowser();
+    }, 20000);
+  })();
+
+  // ---- AMBIENT VOICE HALLUCINATIONS ----
+  (function() {
+    const hallucPhrases = [
+      'behind you', 'turn around', 'i see you', 'dont move', 'run',
+      'it knows', 'you are not alone', 'its watching', 'stay still',
+      'it heard you', 'dont blink', 'you are being followed',
+      'there is someone behind you', 'look up', 'it is right there',
+    ];
+    function playHallucination() {
+      if (!audioReady || !AC || !speechSynthesis) return;
+      const phrase = hallucPhrases[Math.floor(Math.random() * hallucPhrases.length)];
+      const u = new SpeechSynthesisUtterance(phrase);
+      u.rate = 0.2 + Math.random() * 0.3;
+      u.pitch = 0.3 + Math.random() * 0.5;
+      u.volume = 0.15 + Math.random() * 0.15;
+      const voices = speechSynthesis.getVoices();
+      const female = voices.find(v => v.name.toLowerCase().includes('female'));
+      u.voice = female || voices[0];
+      // Pan via StereoPannerNode for spatial effect
+      try {
+        const pan = AC.createStereoPanner();
+        pan.pan.value = (Math.random() - 0.5) * 1.5; // left or right biased
+        const dest = AC.createMediaStreamDestination();
+        // We can't easily pan SpeechSynthesis, but we can create a separate oscillator
+        // just for spatial effect. Instead, attach random pan direction to whisper timing.
+        // Actually, let's use a different approach: create a fake audio context 
+        // pan effect. Since we can't pan speech synthesis directly, let's just
+        // whisper with directional cues.
+      } catch(e) {}
+      speechSynthesis.speak(u);
+    }
+    setInterval(() => {
+      if (fearLevel > 5 && Math.random() > 0.75) playHallucination();
+    }, 10000 - Math.min(fearLevel * 200, 5000));
+  })();
+
+  // ---- FAKE TEXT MESSAGES ----
+  (function() {
+    const convos = [
+      {from:'MOM', msgs:[
+        'are you okay?', 'i havent heard from you', 'please call me',
+        'something is wrong with your phone', 'theres a man at your door',
+        'he is asking for you by name', 'i think he knows where you live',
+        'dont answer the door', 'i am so scared', 'please just text back',
+        'i am coming over', 'HES IN THE HOUSE', 'RUN',
+      ]},
+      {from:'ALEX', msgs:[
+        'dude wtf', 'your camera is on', 'who is that in the background',
+        'are you alone?', 'you need to leave', 'i cant see his face',
+        'he is staring right at me', 'he knows i can see him',
+        'stop looking into the camera', 'he is smiling',
+      ]},
+    ];
+    function showSMS() {
+      if (fearLevel < 4) return;
+      if (document.getElementById('fake-sms')) return;
+      const convo = convos[Math.floor(Math.random() * convos.length)];
+      const from = convo.from;
+      const count = 3 + Math.floor(Math.random() * 4);
+      const msgs = [];
+      for (let i = 0; i < count; i++) {
+        msgs.push(convo.msgs[Math.floor(Math.random() * convo.msgs.length)]);
+      }
+      const el = document.createElement('div');
+      el.id = 'fake-sms';
+      el.style.cssText = `position:fixed;bottom:clamp(10px,3vh,30px);left:clamp(10px,2vw,20px);
+        width:clamp(200px,40vw,300px);z-index:87;background:rgba(10,15,12,0.98);
+        border:1px solid rgba(200,200,200,0.06);border-radius:clamp(8px,1.5vw,12px);
+        font-family:system-ui;font-size:clamp(10px,1.5vw,13px);padding:clamp(10px,1.5vw,15px);
+        box-shadow:0 5px 30px rgba(0,0,0,0.8);`;
+      let html = `<div style="display:flex;justify-content:space-between;align-items:center;
+        border-bottom:1px solid rgba(200,200,200,0.05);padding-bottom:8px;margin-bottom:10px;">
+        <span style="color:rgba(200,200,200,0.3);font-size:clamp(11px,1.6vw,14px);">${from}</span>
+        <span style="color:rgba(200,200,200,0.08);font-size:clamp(8px,1.1vw,10px);">now</span>
+      </div>`;
+      for (const m of msgs) {
+        html += `<div style="background:rgba(200,200,200,0.04);border-radius:8px;
+          padding:6px 10px;margin:4px 0 4px ${Math.random()>0.5?'20px':'0px'};
+          color:rgba(200,200,200,0.25);display:inline-block;max-width:85%;
+          font-size:clamp(9px,1.3vw,12px);">${m}</div><br>`;
+      }
+      html += `<div style="margin-top:8px;font-size:clamp(7px,1vw,9px);color:rgba(200,200,200,0.06);text-align:center;">
+        delivered — read 1m ago</div>`;
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      setTimeout(() => { if (el.parentNode) { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); } }, 8000 + Math.random() * 4000);
+    }
+    setTimeout(() => { if (fearLevel > 3) showSMS(); }, 15000 + Math.random() * 15000);
+    setInterval(() => {
+      if (fearLevel > 6 && Math.random() > 0.6) showSMS();
+    }, 25000);
+  })();
+
+  // ---- CURSOR HALLUCINATION ----
+  (function() {
+    if ('ontouchstart' in window) return; // skip mobile
+    const fake = document.createElement('div');
+    fake.style.cssText = `position:fixed;z-index:1000;pointer-events:none;
+      width:20px;height:20px;border-radius:50%;background:rgba(200,200,200,0.08);
+      border:1px solid rgba(200,200,200,0.12);transition:all 0.3s ease-out;
+      display:none;top:0;left:0;filter:blur(1px);`;
+    document.body.appendChild(fake);
+    let realX = 0, realY = 0;
+    let fakeX = 0, fakeY = 0;
+    let chasing = false;
+    document.addEventListener('mousemove', e => {
+      realX = e.clientX; realY = e.clientY;
+      if (!chasing && fearLevel > 5) {
+        chasing = true;
+        fake.style.display = 'block';
+        fakeX = realX + (Math.random() - 0.5) * 200;
+        fakeY = realY + (Math.random() - 0.5) * 200;
+        animateCursor();
+      }
+    });
+    function animateCursor() {
+      if (!chasing) return;
+      const dx = realX - fakeX;
+      const dy = realY - fakeY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 5) {
+        // Caught up — jump away again
+        fakeX = realX + (Math.random() - 0.5) * 300;
+        fakeY = realY + (Math.random() - 0.5) * 300;
+        fake.style.transition = 'all 1.5s ease-out';
+        fake.style.left = fakeX + 'px';
+        fake.style.top = fakeY + 'px';
+        setTimeout(() => { fake.style.transition = 'all 0.3s ease-out'; }, 1500);
+      } else {
+        fakeX += dx * 0.02;
+        fakeY += dy * 0.02;
+        fake.style.left = fakeX + 'px';
+        fake.style.top = fakeY + 'px';
+      }
+      if (fearLevel > 5) {
+        requestAnimationFrame(animateCursor);
+      } else {
+        chasing = false;
+        fake.style.display = 'none';
+      }
+    }
+    // Re-check fear periodically
+    setInterval(() => {
+      if (fearLevel > 5 && !chasing) {
+        chasing = true;
+        fake.style.display = 'block';
+        fakeX = realX + (Math.random() - 0.5) * 200;
+        fakeY = realY + (Math.random() - 0.5) * 200;
+        animateCursor();
+      }
+      if (fearLevel <= 5 && chasing) {
+        chasing = false;
+        fake.style.display = 'none';
+      }
+    }, 5000);
+  })();
+
   // ---- INIT ----
   document.addEventListener('click', initAudio, { once: true });
   document.addEventListener('keydown', initAudio, { once: true });
