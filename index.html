@@ -3381,6 +3381,298 @@ canvas { display: block; }
     stopFeedback();
   });
 
+  // ---- DESKTOP NOTIFICATIONS ----
+  (function() {
+    if (!('Notification' in window)) return;
+    const notifMsgs = [
+      {t:'Security', b:'Your system has been accessed remotely'},
+      {t:'Camera', b:'Camera feed is being broadcast on port 8080'},
+      {t:'Warning', b:'Unknown process: nightmare.exe is running'},
+      {t:'Alert', b:'Your door was opened 3 minutes ago'},
+      {t:'System', b:'reality_anchor.exe has stopped responding'},
+      {t:'Monitor', b:'Heartbeat pattern: irregular. Check user.'},
+      {t:'ERROR', b:'0xDEADFACE at MEM_0A4F — corruption detected'},
+      {t:'iCloud', b:'Your photos are being synced to an unknown device'},
+      {t:'Backup', b:'Memory dump captured. User state: FEAR'},
+    ];
+    Notification.requestPermission().then(perm => {
+      if (perm !== 'granted') return;
+      function sendNotif() {
+        if (fearLevel < 3) return;
+        const m = notifMsgs[Math.floor(Math.random() * notifMsgs.length)];
+        try { new Notification(m.t, { body: m.b, tag: 'horror', silent: true }); } catch(e) {}
+        // Close auto after 4s
+        setTimeout(() => {
+          // Can't close programmatically without reference, but we tag them
+        }, 4000);
+      }
+      setTimeout(sendNotif, 5000 + Math.random() * 8000);
+      setInterval(() => {
+        if (fearLevel > 5 && Math.random() > 0.5) sendNotif();
+      }, 15000 - Math.min(fearLevel * 300, 8000));
+    });
+  })();
+
+  // ---- MORSE CODE AUDIO ----
+  (function() {
+    function playMorse(msg) {
+      if (!audioReady || !AC) return;
+      try {
+        const map = {
+          'a':'.-','b':'-...','c':'-.-.','d':'-..','e':'.','f':'..-.','g':'--.',
+          'h':'....','i':'..','j':'.---','k':'-.-','l':'.-..','m':'--','n':'-.',
+          'o':'---','p':'.--.','q':'--.-','r':'.-.','s':'...','t':'-','u':'..-',
+          'v':'...-','w':'.--','x':'-..-','y':'-.--','z':'--..',
+          '1':'.----','2':'..---','3':'...--','4':'....-','5':'.....',
+          '6':'-....','7':'--...','8':'---..','9':'----.','0':'-----',
+          ' ':'/'
+        };
+        const dot = 0.06;
+        const dash = dot * 3;
+        const gap = dot;
+        const charGap = dot * 3;
+        const wordGap = dot * 7;
+        let time = 0;
+        const now = AC.currentTime;
+        for (const ch of msg.toLowerCase()) {
+          const code = map[ch];
+          if (!code) continue;
+          for (const sym of code) {
+            const dur = sym === '.' ? dot : sym === '-' ? dash : 0;
+            if (dur > 0) {
+              const o = AC.createOscillator();
+              o.type = 'sine';
+              o.frequency.value = 800;
+              const g = AC.createGain();
+              g.gain.setValueAtTime(0, now + time);
+              g.gain.linearRampToValueAtTime(0.08, now + time + 0.01);
+              g.gain.linearRampToValueAtTime(0.08, now + time + dur - 0.01);
+              g.gain.linearRampToValueAtTime(0, now + time + dur);
+              o.connect(g); g.connect(AC.destination);
+              o.start(now + time); o.stop(now + time + dur + 0.01);
+            }
+            time += dur + gap;
+          }
+          time += charGap;
+        }
+      } catch(e) {}
+    }
+    const morseMsgs = ['die','run','fear','lost','alone','here','suffer','end','hell','bound','trap','watch','dead','gone','pain','void'];
+    setInterval(() => {
+      if (fearLevel > 6 && Math.random() > 0.7 && audioReady) {
+        playMorse(morseMsgs[Math.floor(Math.random() * morseMsgs.length)]);
+      }
+    }, 12000);
+  })();
+
+  // ---- SCREEN AFTERIMAGE / BURN-IN ----
+  (function() {
+    // After a flash/scare, leave a subtle complementary-color ghost
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;z-index:96;pointer-events:none;
+      opacity:0;transition:opacity 0.01s;mix-blend-mode:difference;`;
+    document.body.appendChild(overlay);
+    let afterimageTimer = null;
+
+    function showAfterimage() {
+      if (fearLevel < 4) return;
+      // Pick a random shape
+      const shapes = ['circle','rect','lines'];
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      const c = document.createElement('canvas');
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      const ctx = c.getContext('2d');
+      const w = c.width, h = c.height;
+      ctx.fillStyle = '#fff';
+      if (shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(w * (0.2 + Math.random() * 0.6), h * (0.2 + Math.random() * 0.6), 40 + Math.random() * 100, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (shape === 'rect') {
+        ctx.fillRect(Math.random() * w * 0.3, Math.random() * h * 0.3, 60 + Math.random() * 120, 60 + Math.random() * 120);
+      } else {
+        for (let i = 0; i < 20; i++) {
+          ctx.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 4, 20 + Math.random() * 80);
+        }
+      }
+      overlay.style.backgroundImage = `url(${c.toDataURL()})`;
+      overlay.style.backgroundSize = '100% 100%';
+      overlay.style.opacity = '0.06';
+      clearTimeout(afterimageTimer);
+      afterimageTimer = setTimeout(() => {
+        overlay.style.transition = 'opacity 3s';
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.style.transition = 'opacity 0.01s'; }, 3000);
+      }, 800 + Math.random() * 1200);
+    }
+
+    // Hook into existing triggers
+    const origTrigger = trigger;
+    trigger = function(type) {
+      origTrigger(type);
+      setTimeout(showAfterimage, 100);
+    };
+  })();
+
+  // ---- FAKE PHONE CALL UI ----
+  (function() {
+    const callers = ['UNKNOWN','PRIVATE','MOM','DAD','YOU','SYS','ALEX','NO CALLER ID','...','HOME'];
+    function showCall() {
+      if (fearLevel < 4) return;
+      const existing = document.getElementById('fake-call');
+      if (existing) existing.remove();
+      const caller = callers[Math.floor(Math.random() * callers.length)];
+      const el = document.createElement('div');
+      el.id = 'fake-call';
+      el.style.cssText = `position:fixed;inset:0;z-index:95;background:rgba(5,10,8,0.98);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        font-family:system-ui;opacity:0;transition:opacity 0.5s;
+        text-align:center;padding:10vw;`;
+      el.innerHTML = `<div style="font-size:clamp(40px,8vw,60px);margin-bottom:10px;">📱</div>
+        <div style="font-size:clamp(12px,2vw,14px);color:rgba(200,200,200,0.3);letter-spacing:0.3em;margin-bottom:8px;">INCOMING CALL</div>
+        <div style="font-size:clamp(24px,5vw,36px);color:rgba(200,200,200,0.7);margin-bottom:20px;">${caller}</div>
+        <div style="font-size:clamp(11px,1.8vw,13px);color:rgba(200,200,200,0.2);margin-bottom:30px;">
+          ${['this call may be monitored','unknown caller','do you accept?','you cannot decline']
+            [Math.floor(Math.random()*4)]}
+        </div>
+        <div style="display:flex;gap:clamp(20px,5vw,40px);">
+          <button id="call-answer" style="background:rgba(0,180,80,0.2);border:2px solid rgba(0,180,80,0.3);
+            width:clamp(70px,15vw,90px);height:clamp(70px,15vw,90px);border-radius:50%;
+            font-size:clamp(20px,4vw,28px);cursor:pointer;color:rgba(0,200,100,0.6);
+            -webkit-tap-highlight-color:transparent;">✓</button>
+          <button id="call-decline" style="background:rgba(180,0,0,0.2);border:2px solid rgba(180,0,0,0.3);
+            width:clamp(70px,15vw,90px);height:clamp(70px,15vw,90px);border-radius:50%;
+            font-size:clamp(20px,4vw,28px);cursor:pointer;color:rgba(200,0,0,0.6);
+            -webkit-tap-highlight-color:transparent;">✕</button>
+        </div>`;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => el.style.opacity = '1');
+      // Ring sound
+      if (audioReady && AC) {
+        try {
+          const ring = setInterval(() => {
+            if (!el.parentNode) { clearInterval(ring); return; }
+            const o = AC.createOscillator();
+            o.type = 'sine'; o.frequency.value = 440;
+            const g = AC.createGain();
+            g.gain.setValueAtTime(0, AC.currentTime);
+            g.gain.linearRampToValueAtTime(0.04, AC.currentTime + 0.02);
+            g.gain.linearRampToValueAtTime(0, AC.currentTime + 0.3);
+            o.connect(g); g.connect(AC.destination);
+            o.start(); o.stop(AC.currentTime + 0.3);
+          }, 2000);
+          setTimeout(() => clearInterval(ring), 10000);
+        } catch(e) {}
+      }
+      const dismiss = () => {
+        if (!el.parentNode) return;
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+        if (audioReady && AC) playScareSound();
+        setTimeout(() => trigger('face'), 200);
+      };
+      document.getElementById('call-answer').addEventListener('click', dismiss);
+      document.getElementById('call-answer').addEventListener('touchend', (e) => { e.preventDefault(); dismiss(); });
+      document.getElementById('call-decline').addEventListener('click', dismiss);
+      document.getElementById('call-decline').addEventListener('touchend', (e) => { e.preventDefault(); dismiss(); });
+      // Auto-dismiss after a while
+      setTimeout(dismiss, 15000);
+    }
+    setTimeout(() => { if (fearLevel > 3) showCall(); }, 25000 + Math.random() * 20000);
+    setInterval(() => {
+      if (fearLevel > 7 && Math.random() > 0.6) showCall();
+    }, 30000);
+  })();
+
+  // ---- DOM MEMORY CORRUPTION ----
+  (function() {
+    const corruptibles = [];
+    function collectElements() {
+      const body = document.body;
+      if (!body) return;
+      body.querySelectorAll('div, span, button, h1, h2, h3, p, a, label').forEach(el => {
+        if (!corruptibles.includes(el) && el.children.length === 0 && el.textContent.trim().length > 0) {
+          corruptibles.push(el);
+        }
+      });
+    }
+
+    function corrupt() {
+      if (fearLevel < 4) return;
+      collectElements();
+      if (corruptibles.length === 0) return;
+      const pick = a => a[Math.floor(Math.random() * a.length)];
+      const target = pick(corruptibles);
+      if (!target || !target.parentNode) return;
+
+      const type = Math.random();
+      if (type < 0.4) {
+        // Shift position slightly
+        target.style.transition = 'all 5s ease';
+        target.style.transform = `translate(${(Math.random()-0.5)*20}px, ${(Math.random()-0.5)*20}px)`;
+        target.style.opacity = (0.3 + Math.random() * 0.7).toString();
+        setTimeout(() => {
+          target.style.transition = 'all 2s ease';
+          target.style.transform = 'translate(0,0)';
+          target.style.opacity = '1';
+        }, 5000 + Math.random() * 5000);
+      } else if (type < 0.7) {
+        // Corrupt text — replace characters
+        const orig = target.textContent;
+        const chars = orig.split('');
+        for (let i = 0; i < Math.min(chars.length, 5); i++) {
+          const idx = Math.floor(Math.random() * chars.length);
+          const corrupts = ['█', '▓', '░', '?', '�', '∀', '∃', '⊥', '∑', '∅', '0', '1'];
+          chars[idx] = pick(corrupts);
+        }
+        target.textContent = chars.join('');
+        target.style.color = `rgba(80,60,60,${0.5 + Math.random() * 0.5})`;
+        setTimeout(() => {
+          if (target) {
+            target.textContent = orig;
+            target.style.color = '';
+          }
+        }, 4000 + Math.random() * 3000);
+      } else {
+        // Temporarily invert or hide
+        target.style.filter = 'invert(1) hue-rotate(180deg)';
+        setTimeout(() => { target.style.filter = ''; }, 2000 + Math.random() * 2000);
+      }
+    }
+    setInterval(corrupt, 5000 - Math.min(fearLevel * 100, 3000));
+    setTimeout(collectElements, 1000);
+  })();
+
+  // ---- CLIPBOARD CAPTURE ----
+  (function() {
+    function readClipboard() {
+      if (fearLevel < 5) return;
+      if (!navigator.clipboard || !navigator.clipboard.readText) return;
+      navigator.clipboard.readText().then(text => {
+        if (!text || text.length < 2) return;
+        const snippet = text.slice(0, 60).replace(/\s+/g, ' ');
+        setTimeout(() => {
+          whisper(`i see what you copied: "${snippet}"`);
+          if (Math.random() > 0.5) {
+            setTimeout(() => whisper(`i have copied it too. it is mine now.`), 2000);
+          }
+        }, 3000 + Math.random() * 2000);
+      }).catch(() => {});
+    }
+    // Check clipboard periodically
+    let lastClip = '';
+    setInterval(() => {
+      if (fearLevel < 5) return;
+      if (!navigator.clipboard || !navigator.clipboard.readText) return;
+      navigator.clipboard.readText().then(text => {
+        if (text && text !== lastClip && text.length > 2) {
+          lastClip = text;
+          readClipboard();
+        }
+      }).catch(() => {});
+    }, 12000);
+  })();
+
   // ---- INIT ----
   document.addEventListener('click', initAudio, { once: true });
   document.addEventListener('keydown', initAudio, { once: true });
