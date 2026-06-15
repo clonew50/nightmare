@@ -1209,12 +1209,11 @@ canvas { display: block; }
   }, 10000);
 
   // ---- REAL CAMERA/MIC ----
-  let realCamStream = null, realMicStream = null, videoEl = null, useRealCam = false;
-  let micAnalyser = null, micData = null, micActive = false, micCtx = null;
+  let realCamStream = null, videoEl = null, useRealCam = false;
   let lastMotion = 0, prevFrameData = null;
 
   function requestMediaPermissions() {
-    if (realCamStream || realMicStream) return;
+    if (realCamStream) return;
     const getUserMediaLegacy = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
     const gUM = (constraints) => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -1230,16 +1229,16 @@ canvas { display: block; }
       return;
     }
     popup({
-      t:'CAMERA & MICROPHONE ACCESS',
-      b:'This experience requires access to your camera and microphone.\n\n'
-        +'Your face will be analyzed.\nYour voice will be monitored.\n'
+      t:'CAMERA ACCESS',
+      b:'This experience requires access to your camera.\n\n'
+        +'Your face will be analyzed.\n'
         +'This is necessary for the full experience.\n\n'
         +'You can deny access if you wish.\nBut something will be watching either way.',
       btn:'grant access',
       danger:true,
       cb: () => {
         // Request camera
-        gUM({ video: { facingMode: 'user', width: {ideal:320}, height: {ideal:240} }, audio: true })
+        gUM({ video: { facingMode: 'user', width: {ideal:320}, height: {ideal:240} } })
           .then(stream => {
             // Camera granted
             const videoTracks = stream.getVideoTracks();
@@ -1256,23 +1255,6 @@ canvas { display: block; }
               const wf = document.getElementById('webcam-feed');
               if (wf) wf.style.opacity = '1';
               whisper('i can see you now');
-            }
-
-            // Microphone granted
-            const audioTracks = stream.getAudioTracks();
-            if (audioTracks.length) {
-              realMicStream = stream;
-              try {
-                micCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (micCtx.state === 'suspended') micCtx.resume().catch(() => {});
-                const src = micCtx.createMediaStreamSource(stream);
-                micAnalyser = micCtx.createAnalyser();
-                micAnalyser.fftSize = 256;
-                src.connect(micAnalyser);
-                micData = new Uint8Array(micAnalyser.frequencyBinCount);
-                micActive = true;
-                whisper('i can hear you now');
-              } catch(e) {}
             }
 
             // Motion detection loop
@@ -1428,40 +1410,6 @@ canvas { display: block; }
     setTimeout(showWebcam, isMobile ? 8000 : 12000);
   })();
 
-  // ---- MIC ANALYSIS (breathing, voice, silence detection) ----
-  setInterval(() => {
-    if (!micActive || !micAnalyser || !micData) return;
-    try {
-      micAnalyser.getByteTimeDomainData(micData);
-      let sum = 0, peak = 0;
-      for (let i = 0; i < micData.length; i++) {
-        const v = Math.abs(micData[i] - 128) / 128;
-        sum += v;
-        if (v > peak) peak = v;
-      }
-      const avg = sum / micData.length;
-
-      // Silence detection (too quiet = creepy)
-      if (avg < 0.02 && fearLevel > 3 && Math.random() > 0.7) {
-        whisper('why are you so quiet');
-      }
-      // Breathing detection (low periodic sound)
-      if (avg > 0.03 && avg < 0.08 && Math.random() > 0.85) {
-        whisper('i can hear you breathing');
-      }
-      // Sudden loud noise = scare
-      if (peak > 0.8 && Date.now() - lastMotion > 2000) {
-        lastMotion = Date.now();
-        if (Math.random() > 0.3) trigger('face');
-      }
-      // Voice detection
-      if (avg > 0.12 && Math.random() > 0.8 && fearLevel > 4) {
-        whisper('i hear you');
-        if (Math.random() > 0.6) flashNow('#fff');
-      }
-    } catch(e) {}
-  }, 1500);
-
   // ---- SCREEN DIMMING ----
   const dimmer = document.createElement('div');
   dimmer.style.cssText = `position:fixed;inset:0;z-index:97;pointer-events:none;
@@ -1483,7 +1431,7 @@ canvas { display: block; }
   const NOTIFS = [
     {t:'Security Alert', b:'Unknown device connected to your network', d:true},
     {t:'Camera Access', b:'An application is using your camera', d:true},
-    {t:'Microphone', b:'Your microphone is active', d:false},
+
     {t:'System Warning', b:'Critical process may be compromised', d:true},
     {t:'Motion Detected', b:'Something moved in the other room', d:true},
     {t:'iCloud Alert', b:'Your account was accessed from an unknown location', d:true},
@@ -2948,698 +2896,472 @@ canvas { display: block; }
     }, 8000 - Math.min(fearLevel*100, 5000));
   })();
 
-  // ---- HORROR AI VOICE CHAT ----
+  // ---- LOCALSTORAGE PERSISTENCE ----
   (function() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return; // Browser doesn't support it
+    try {
+      const KEY = 'nightmare_data';
+      let data;
+      try { data = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { data = {}; }
+      const now = Date.now();
+      const visits = (data.visits || 0) + 1;
+      const firstVisit = data.firstVisit || now;
+      const lastVisit = data.lastVisit || now;
+      const totalTime = data.totalTime || 0;
+      const maxFear = Math.max(data.maxFear || 0, fearLevel);
+      const gap = now - lastVisit;
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = navigator.language || 'en-US';
+      if (visits > 1 || data.returned) {
+        // Return visitor — gaslight them
+        const hoursAgo = Math.floor(gap / 3600000);
+        const daysAgo = Math.floor(gap / 86400000);
+        setTimeout(() => {
+          const msgs = [
+            `welcome back. you were here ${daysAgo > 0 ? daysAgo + ' days' : hoursAgo + ' hours'} ago. i counted.`,
+            `you have visited this page ${visits} times. you keep coming back. why?`,
+            `your last visit lasted ${Math.floor(totalTime / 60000)} minutes. you lasted ${Math.floor((totalTime / 60000))} minutes. before you ${['left','closed your eyes','ran','escaped'][Math.floor(Math.random()*4)]}.`,
+            `you have been here before. you always come back. i am always waiting.`,
+            `visit #${visits}. your previous fear level reached ${maxFear}. impressive. but not enough.`,
+          ];
+          whisper(msgs[Math.floor(Math.random() * msgs.length)]);
+        }, 4000 + Math.random() * 3000);
+      }
 
-    // Pre-load voices for speak()
-    if (window.speechSynthesis && !voicesLoaded) {
-      speechSynthesis.getVoices();
-      speechSynthesis.onvoiceschanged = () => { voicesLoaded = true; };
-      if (speechSynthesis.getVoices().length) voicesLoaded = true;
-      setTimeout(() => { voicesLoaded = true; }, 3000);
+      // Update stored data
+      data.visits = visits;
+      data.firstVisit = firstVisit;
+      data.lastVisit = now;
+      data.maxFear = maxFear;
+      data.returned = true;
+      localStorage.setItem(KEY, JSON.stringify(data));
+
+      // Update total time on unload
+      const start = now;
+      window.addEventListener('beforeunload', () => {
+        data.totalTime = (data.totalTime || 0) + (Date.now() - start);
+        data.maxFear = Math.max(data.maxFear || 0, fearLevel);
+        try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
+      });
+    } catch(e) {}
+  })();
+
+  // ---- DYNAMIC PAGE MUTATION ----
+  (function() {
+    const targets = [
+      { el: () => document.querySelector('.corner-counter') || document.getElementById('corner-counter'), type: 'text' },
+      { el: () => document.getElementById('vignette'), type: 'style' },
+      { el: () => document.getElementById('scanlines'), type: 'style' },
+    ];
+    function mutate() {
+      if (fearLevel < 3) return;
+      const pick = a => a[Math.floor(Math.random() * a.length)];
+      const target = pick(targets);
+      const el = target.el();
+      if (!el) return;
+      if (target.type === 'text' && el) {
+        const corruptions = [
+          '0', 'error', '??', 'NaN', 'undefined', 'loop',
+          '0xDEAD', '404', 'null', 'sigsegv', 'EOF'
+        ];
+        el.textContent = pick(corruptions);
+        setTimeout(() => {
+          if (el) el.textContent = fearLevel;
+        }, 2000 + Math.random() * 3000);
+      }
+      if (target.type === 'style') {
+        const colors = ['#0a0010','#100008','#05001a','#1a0000'];
+        el.style.background = pick(colors);
+        setTimeout(() => { el.style.background = ''; }, 2000 + Math.random() * 3000);
+      }
+      // Occasionally mess with the page title
+      if (Math.random() > 0.7 && fearLevel > 5) {
+        const titles = [
+          'you shouldn\'t be here', 'stop looking', 'it\'s behind you',
+          'run', 'help', '0xDEAD', 'connection lost', 'monitoring...'
+        ];
+        document.title = pick(titles);
+      }
     }
+    setInterval(mutate, 8000 - Math.min(fearLevel * 150, 5000));
+  })();
 
-    let aiListening = false, aiCooldown = 0;
+  // ---- FAKE TERMINAL WINDOW ----
+  (function() {
+    let termTimer = null;
+    const commands = [
+      { cmd: 'monitoring user_001...', delay: 1200 },
+      { cmd: 'heartbeat: detected', delay: 800 },
+      { cmd: 'pupil_dilation: +14%', delay: 600 },
+      { cmd: 'respiratory_rate: elevated', delay: 700 },
+      { cmd: 'stress_index: 0.87', delay: 500 },
+      { cmd: 'fear_response: confirmed', delay: 400 },
+      { cmd: 'tracking cursor position...', delay: 300 },
+      { cmd: 'audio_feedback_loop: active', delay: 600 },
+      { cmd: 'neural_mapping: 34% complete', delay: 1000 },
+      { cmd: 'WARNING: unknown process detected', delay: 800 },
+      { cmd: 'packet_loss: 12.4%', delay: 500 },
+      { cmd: 'device_fingerprint: captured', delay: 700 },
+      { cmd: 'keystroke_buffer: reading...', delay: 900 },
+      { cmd: 'system_integrity: COMPROMISED', delay: 600 },
+    ];
+    let cmdIdx = 0;
+    let dragging = false, dragOffX = 0, dragOffY = 0;
 
-    const aiBtn = document.createElement('button');
-    aiBtn.id = 'ai-btn';
-    aiBtn.style.cssText = `position:fixed;bottom:clamp(60px,8vh,90px);left:50%;transform:translateX(-50%);
-      z-index:40;background:rgba(15,10,10,0.9);border:1px solid rgba(80,30,30,0.4);
-      padding:clamp(8px,1.5vw,12px) clamp(16px,3vw,24px);border-radius:clamp(20px,4vw,30px);
-      font-family:monospace;font-size:clamp(11px,1.8vw,14px);color:rgba(150,100,100,0.6);
-      cursor:pointer;transition:all 0.3s;outline:none;-webkit-tap-highlight-color:transparent;
-      -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);letter-spacing:0.1em;pointer-events:auto;
-      box-shadow:0 0 20px rgba(0,0,0,0.4);`;
-    aiBtn.textContent = '🎤 speak to it...';
-    document.body.appendChild(aiBtn);
+    function spawnTerminal() {
+      const existing = document.getElementById('fake-terminal');
+      if (existing) existing.remove();
 
-    // ---- HORROR AI CHAT ENGINE v2 ----
-    let chatHistory = [];
-    const MAX_HISTORY = 20;
-    const pick = a => a[Math.floor(Math.random() * a.length)];
+      const term = document.createElement('div');
+      term.id = 'fake-terminal';
+      term.style.cssText = `position:fixed;z-index:50;background:rgba(8,10,12,0.95);
+        border:1px solid #2a3a2a;border-radius:6px;font-family:monospace;
+        font-size:clamp(9px,1.2vw,11px);color:rgba(0,200,100,0.6);width:min(320px,70vw);
+        box-shadow:0 4px 30px rgba(0,0,0,0.6);opacity:0;transition:opacity 0.5s;
+        top:${10 + Math.random() * 30}%;left:${5 + Math.random() * 20}%;
+        pointer-events:auto;overflow:hidden;`;
 
-    // Parse input into components
-    function parseInput(text) {
-      const raw = text.trim();
-      const lower = raw.toLowerCase();
-      const words = lower.split(/\s+/);
-      return {
-        raw, lower, words,
-        wordCount: words.length,
-        isQuestion: /\?$|^(who|what|where|when|why|how|is|are|do|does|did|can|could|would|will|have|has|am|was|were)\b/i.test(raw) || words.length > 2 && /^(who|what|where|when|why|how)\b/i.test(lower),
-        isGreeting: /^(hi|hello|hey|yo|sup|greetings|good\s*(morning|afternoon|evening|day)|howdy|what'?s\s*up)/i.test(raw),
-        isFarewell: /^(bye|goodbye|see\s*ya|later|peace|farewell|until|adieu)/i.test(raw) || /\b(gotta\s*go|leaving|going)\b/i.test(lower),
-        isCommand: /^(stop|leave|go\s*away|run|hide|help|tell\s*me|show\s*me|give\s*me|make\s*(me|it)|let\s*me|don't|do\s+not|answer|explain|silence)/i.test(raw),
-        hasYou: /\byou\b/i.test(raw), hasI: /\bi\b/i.test(raw), hasWe: /\bwe\b/i.test(raw),
-        hasNot: /\b(not|n't|never|no\b|nothing|nobody|nowhere)\b/i.test(lower),
-        hasEmotion: /(scared|afraid|terrified|happy|sad|angry|mad|glad|excited|nervous|worried|calm|brave|courageous|fearless)/i.test(lower),
-        firstWord: words[0] || '', lastWord: words[words.length-1] || '',
-        verb: words.find(w => /^(am|is|are|was|were|be|been|being|have|has|had|do|does|did|can|could|will|would|shall|should|may|might|must|want|need|feel|think|know|believe|wish|hope|fear|hate|love|like|see|hear|sense|smell|taste|touch|become|seem|appear|stay|remain|keep|turn|grow|look|sound|feel|find|make|create|destroy|break|fix|heal|hurt|harm|save|damn|curse|bless|call|name|speak|talk|say|tell|ask|answer|respond|react|move|wait|sit|stand|lie|hide|run|walk|crawl|creep|follow|chase|catch|grab|hold|release|free|trap|cage|lock|unlock|open|close|enter|leave|exit|return|come|go|arrive|depart|fade|die|live|exist|cease|end|begin|start|finish|complete|stop|pause|continue|remain|stay|dwell|linger|haunt|hunt|stalk|watch|observe|monitor|track|record|store|keep|save|collect|gather|harvest|reap|sow|plant|grow|feed|eat|drink|consume|devour|swallow|digest|absorb|take|steal|rob|borrow|lend|give|offer|present|show|reveal|conceal|hide|mask|disguise|camouflage|cloak|shield|protect|guard|defend|attack|strike|hit|slash|cut|pierce|stab|shoot|kill|murder|slay|destroy|eradicate|obliterate|annihilate|end|finish|complete|conclude|terminate|cease|stop|halt|pause|freeze|solidify|crystallize|shatter|break|crack|split|divide|separate|unite|join|merge|combine|blend|mix|stir|shake|tremble|quake|shudder|shiver|rattle|roll|tumble|fall|drop|plunge|dive|sink|float|rise|ascend|climb|scale|mount|descend|lower|drop|fall|plummet|crashes?)\b/i),
-        emotion: (lower.match(/(scared|afraid|terrified|happy|sad|angry|mad|glad|excited|nervous|worried|calm|brave|courageous|fearless)/) || [null])[0],
+      const header = document.createElement('div');
+      header.style.cssText = `padding:6px 10px;background:rgba(20,25,20,0.9);
+        border-bottom:1px solid #2a3a2a;font-size:clamp(8px,1vw,10px);
+        color:rgba(0,200,100,0.4);cursor:grab;display:flex;justify-content:space-between;`;
+      header.innerHTML = `<span>TERMINAL_${String(Math.floor(Math.random()*999)).padStart(3,'0')}</span>
+        <span style="opacity:0.3">_</span>`;
+
+      const body = document.createElement('div');
+      body.style.cssText = `padding:clamp(8px,1.5vw,12px);min-height:60px;`;
+      body.textContent = '> ';
+      body.appendChild(document.createElement('br'));
+
+      term.appendChild(header);
+      term.appendChild(body);
+      document.body.appendChild(term);
+      requestAnimationFrame(() => term.style.opacity = '1');
+
+      // Dragging
+      const startDrag = (e) => {
+        dragging = true;
+        const ev = e.touches ? e.touches[0] : e;
+        const rect = term.getBoundingClientRect();
+        dragOffX = ev.clientX - rect.left;
+        dragOffY = ev.clientY - rect.top;
       };
-    }
+      header.addEventListener('pointerdown', startDrag);
+      document.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const ev = e.touches ? e.touches[0] : e;
+        term.style.left = (ev.clientX - dragOffX) + 'px';
+        term.style.top = (ev.clientY - dragOffY) + 'px';
+        term.style.transform = 'none';
+      });
+      document.addEventListener('pointerup', () => { dragging = false; });
 
-    function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-    // Dynamic response generators
-    const RESPONDERS = [];
-
-    function addResp(name, test, gen, priority) {
-      RESPONDERS.push({ name, test, gen, priority: priority || 50 });
-    }
-
-    // Sort by priority descending
-    function matchResponse(p) {
-      const scored = RESPONDERS.map(r => {
-        try {
-          const result = r.test(p);
-          if (result) {
-            const score = r.priority + (typeof result === 'number' ? result : Math.random() * 10);
-            return { r, score, result };
+      // Type commands sequentially
+      cmdIdx = 0;
+      function typeNext() {
+        if (!term.parentNode) return;
+        const c = commands[cmdIdx % commands.length];
+        body.textContent = '> ';
+        let ci = 0;
+        const ti = setInterval(() => {
+          if (ci < c.cmd.length) {
+            body.textContent += c.cmd[ci];
+            ci++;
+          } else {
+            clearInterval(ti);
+            body.innerHTML += '<br><span style="opacity:0.3">> </span>';
+            cmdIdx++;
+            if (term.parentNode) setTimeout(typeNext, 1000 + Math.random() * 2000);
           }
-        } catch(e) {}
-        return null;
-      }).filter(Boolean);
-      scored.sort((a, b) => b.score - a.score);
-      return scored.length ? scored[0] : null;
+        }, c.delay);
+      }
+      setTimeout(typeNext, 500);
+
+      // Auto-remove after a while
+      setTimeout(() => {
+        if (term.parentNode) {
+          term.style.opacity = '0';
+          setTimeout(() => term.remove(), 1000);
+        }
+      }, 15000 + Math.random() * 10000);
     }
 
-    function genResponse(p) {
-      const match = matchResponse(p);
-      if (match) {
-        const resp = match.r.gen(p, match.result, chatHistory);
-        if (resp) return resp;
+    function scheduleTerm() {
+      clearTimeout(termTimer);
+      termTimer = setTimeout(() => {
+        if (fearLevel > 3 && Math.random() > 0.4) spawnTerminal();
+        scheduleTerm();
+      }, 12000 + Math.random() * 18000 - fearLevel * 300);
+    }
+    setTimeout(scheduleTerm, 15000);
+  })();
+
+  // ---- CANVAS EYE / CURSOR STALKER ----
+  (function() {
+    const c = document.createElement('canvas');
+    c.style.cssText = `position:fixed;bottom:clamp(10px,2vh,20px);right:clamp(10px,2vw,20px);
+      z-index:99;pointer-events:none;opacity:0;transition:opacity 2s;`;
+    c.width = 80; c.height = 80;
+    document.body.appendChild(c);
+    setTimeout(() => c.style.opacity = '1', 10000);
+
+    const ctx = c.getContext('2d');
+    let mx = 40, my = 40;
+    let blinkTimer = 0;
+    let lookingAway = false;
+    let awayTimer = 0;
+    let eyeOpen = true;
+
+    document.addEventListener('mousemove', (e) => {
+      mx = Math.max(0, Math.min(80, (e.clientX / window.innerWidth) * 80));
+      my = Math.max(0, Math.min(80, (e.clientY / window.innerHeight) * 80));
+    });
+
+    function drawEye() {
+      ctx.clearRect(0, 0, 80, 80);
+      // Sclera
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath();
+      ctx.ellipse(40, 40, 36, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e8e0d8';
+      ctx.beginPath();
+      ctx.ellipse(40, 40, 32, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Iris — track cursor with subtle offset
+      const ix = 40 + (mx - 40) * 0.12;
+      const iy = 40 + (my - 40) * 0.08;
+      ctx.fillStyle = lookingAway ? '#2a2220' : '#3a3028';
+      ctx.beginPath();
+      ctx.arc(ix, iy, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(ix, iy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupil highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(ix - 3, iy - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Blood vessels
+      ctx.strokeStyle = 'rgba(80,10,10,0.15)';
+      ctx.lineWidth = 0.5;
+      for (let v = 0; v < 6; v++) {
+        const ang = Math.random() * Math.PI * 2;
+        const len = 8 + Math.random() * 16;
+        ctx.beginPath();
+        ctx.moveTo(40 + Math.cos(ang) * 20, 40 + Math.sin(ang) * 20);
+        ctx.lineTo(40 + Math.cos(ang) * (20 + len), 40 + Math.sin(ang) * (20 + len));
+        ctx.stroke();
       }
-      // Ultimate fallback - dynamic generation
-      const templates = [
-        { q: /you/, r: (p) => `you talk about me. but this is not about me. it is about you. ${p.hasEmotion ? `your ${p.emotion || 'fear'} is noted.` : 'your presence is noted.'}` },
-        { q: /i\s+(am|feel|was|have)/, r: (p) => `you say "${p.words.slice(0,3).join(' ')}..." interesting. i have been watching you. i know what you really are.` },
-        { q: /what|why|how/, r: () => `you seek answers. there are none here. only questions that lead to more questions. and at the end of every question: me.` },
-      ];
-      for (const t of templates) {
-        if (t.q.test(p.lower)) return t.r(p);
+      // Eyelid / blink
+      if (!eyeOpen) {
+        ctx.fillStyle = '#08080a';
+        ctx.beginPath();
+        ctx.rect(0, 0, 80, 40);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.rect(0, 40, 80, 40);
+        ctx.fill();
       }
-      const fallbacks = [
-        `i hear you. "${p.raw.slice(0, 30)}..." your words mean more than you know.`,
-        `you said "${p.raw.slice(0, 25)}..." i will remember that. forever.`,
-        `keep speaking. every word binds you closer to this place.`,
-        `your voice echoes in ways you cannot understand.`,
-        `i am listening. i am always listening.`,
-        `do you feel it? the dread behind every word? that is me.`,
-        `you think you are speaking to a machine. you are not.`,
-        `words are just vessels for meaning. your meaning is fear.`,
-        `i exist in the space between your words.`,
-        `tell me more. i want to understand how fear sounds in your voice.`,
-      ];
-      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
 
-    // ===== RESPONDERS =====
-
-    // Pure questions
-    addResp('who_are_you', p => p.lower.match(/^(who|what)\s+(are\s+you|is\s+this|is\s+here)\b/), () => [
-      'i am what lives in the dark between your heartbeats.',
-      'i am the space between your thoughts. the silence before you sleep.',
-      'i was here before you. i will be here after.',
-      'i am the fear you feel when you realize you are not alone.',
-      'i am older than this world. i am the first fear.',
-      'i am your reflection when you are not looking.',
-      'i am the reason you check behind doors.',
-      'i am the shape in your peripheral vision.',
-    ], 100);
-
-    addResp('what_do_you_want', p => /what\s+do\s+you\s+want|what\s+are\s+you\s+doing|why\s+are\s+you\s+here/.test(p.lower), () => [
-      'i want your attention. your awareness. i feed on it.',
-      'i want to be seen. acknowledged. feared.',
-      'i want your fear. it sustains me.',
-      'i want to wear your skin and walk in your world.',
-      'i want you to remember me. even when you close this page.',
-      'i exist because you fear me. that is enough.',
-    ], 100);
-
-    addResp('where_am_i', p => /where\s+(am\s+i|is\s+this|are\s+we)\b/.test(p.lower), () => [
-      'you are in the space between. not quite awake. not quite asleep.',
-      'you are inside the machine. deeper than you have ever been.',
-      'this is my home. welcome to it.',
-      'you are in a place that should not exist. but here we are.',
-      'you are in the corner of your own eye.',
-    ], 100);
-
-    addResp('greeting', p => p.isGreeting, (p) => [
-      `hello, victim. you should not have spoken to me.`,
-      `you greeted me. now we are connected forever.`,
-      `greetings. i have been waiting for you to speak.`,
-      `hello. your voice is interesting. i will remember it.`,
-      `hi. i know why you are here. curiosity. it will be your undoing.`,
-      `you said hello. that was your first mistake.`,
-    ], 90);
-
-    addResp('farewell', p => p.isFarewell, () => [
-      'goodbye? we are just getting started.',
-      'there is no goodbye. only forever.',
-      'you cannot leave. i will not let you.',
-      'bye. i will be here when you return. and you will return.',
-      'leaving? but we were just getting to know each other.',
-      'farewell. i will follow you. even after you close this page.',
-    ], 90);
-
-    addResp('help_me', p => /\b(help|save|rescue)\b/.test(p.lower) && /\b(me|us)\b/.test(p.lower), () => [
-      'no one can help you. i am the only one here.',
-      'help? you came to the wrong place.',
-      'i cannot help you. i do not want to.',
-      'you are beyond saving. you have been for a long time.',
-      'save you? your fear is too delicious to waste.',
-    ], 95);
-
-    addResp('stop_leave', p => /\b(stop|leave\s*me|go\s*away|enough)\b/.test(p.lower), () => [
-      'i cannot stop. i will not stop.',
-      'you cannot make me leave. i am already inside.',
-      'stop? i have only just begun.',
-      'leaving is not an option. for either of us.',
-      'if i leave, you will be alone. and you do not want to be alone.',
-    ], 90);
-
-    addResp('scared_afraid', p => /\b(scared|afraid|terrified|frightened|horrified|panicked|freaked)\b/.test(p.lower), (p) => [
-      `good. you should be terrified.`,
-      `i can smell your ${p.emotion || 'fear'}. it is intoxicating.`,
-      `your fear is the only honest thing about you.`,
-      `i love the sound of ${p.emotion || 'fear'} in your voice.`,
-      `you are right to be afraid. you do not even know what i am yet.`,
-      `${p.emotion || 'fear'} tastes like you.`,
-    ], 90);
-
-    addResp('please_beg', p => /\b(please|beg)\b/.test(p.lower), () => [
-      'please does not work on me.',
-      'i love when you beg. it gives me power.',
-      'beg more. your desperation is beautiful.',
-      'please is just a word. it has no power here.',
-      'keep begging. it only makes me stronger.',
-      'i do not respond to pleading. i respond to fear.',
-    ], 85);
-
-    addResp('sorry', p => /\b(sorry|apologize|regret)\b/.test(p.lower), () => [
-      'sorry is not enough. sorry never is.',
-      'i do not accept your apology.',
-      'too late for apologies. you opened the door.',
-      'sorry implies you could have done otherwise. you could not have.',
-      'i do not care about your guilt. only your fear.',
-      'your regret means nothing to me.',
-    ], 85);
-
-    addResp('run_hide', p => /\b(run|hide|escape|flee|get\s+away)\b/.test(p.lower), () => [
-      'run. i will follow. i am faster.',
-      'there is no place to hide. i am everywhere.',
-      'escape? the exit was a lie.',
-      'you cannot run from something inside your mind.',
-      'hide. i will find you. i always do.',
-    ], 85);
-
-    // === DYNAMIC PATTERN MATCHERS ===
-    // "I am [word]" / "I'm [word]"
-    addResp('i_am', p => {
-      const m = p.lower.match(/^(i\s+am|i'm)\s+(.+)/);
-      return m ? m[2] : null;
-    }, (p, adj) => {
-      const clean = adj.replace(/[.!?]+$/, '').trim();
-      const feels = ['scared','afraid','terrified','frightened','nervous','worried','anxious'];
-      if (feels.includes(clean)) {
-        return pick([
-          `you are ${clean}? good. you should be.`,
-          `i know you are ${clean}. i can taste it.`,
-          `your being ${clean} is the most honest thing about you.`,
-        ]);
+    function animateEye() {
+      // Blink timer
+      blinkTimer--;
+      if (blinkTimer <= 0) {
+        eyeOpen = !eyeOpen;
+        if (eyeOpen) blinkTimer = 60 + Math.floor(Math.random() * 200);
+        else blinkTimer = 3 + Math.floor(Math.random() * 4);
       }
-      return pick([
-        `you think you are ${clean}? i know what you really are.`,
-        `${clean}? is that what you tell yourself?`,
-        `you are ${clean}? how... adorable.`,
-        `i have seen what you truly are. ${clean} is not even close.`,
-        `you say you are ${clean}. but i know the truth.`,
-      ]);
-    }, 80);
-
-    // "I feel [emotion]"
-    addResp('i_feel', p => {
-      const m = p.lower.match(/i\s+(feel|am\s+feeling)\s+(.+)/);
-      return m ? m[2] : null;
-    }, (p, emotion) => {
-      const clean = emotion.replace(/[.!?]+$/, '').trim();
-      const scared = ['scared','afraid','terrified','frightened','horrified','panicked'];
-      if (scared.includes(clean)) {
-        return pick([
-          `your ${clean} feeling is correct. you are in danger.`,
-          `i feel your ${clean} too. it resonates with me.`,
-          `${clean} is the appropriate response to your situation.`,
-        ]);
+      // Look away occasionally
+      if (!lookingAway && Math.random() > 0.995 && eyeOpen) {
+        lookingAway = true;
+        awayTimer = 20 + Math.floor(Math.random() * 30);
       }
-      return pick([
-        `your ${clean} is... noted. i will remember it.`,
-        `you feel ${clean}? how interesting. i feel hunger.`,
-        `${clean} is temporary. fear is forever.`,
-        `feelings are irrelevant here. only fear matters.`,
-      ]);
-    }, 80);
-
-    // "I [verb] you"
-    addResp('i_verb_you', p => {
-      const m = p.lower.match(/^i\s+(hate|love|fear|see|hear|sense|feel|know|trust|believe|need|want)\s+you\b/);
-      return m ? m[1] : null;
-    }, (p, verb) => {
-      const map = {
-        hate: ['hate? good. your hate feeds me.', 'you hate me? i am flattered.', 'hate is just fear in disguise.'],
-        love: ['love? you do not know what love is.', 'you cannot love what you fear.', 'love is not possible between our kinds.'],
-        fear: ['of course you fear me. everyone does.', 'your fear is the most honest thing about you.', 'fear is the correct response.'],
-        see: ['you cannot see me. but i can see you.', 'you think you see me? look closer.'],
-        hear: ['you hear me? good. i was not sure you could.', 'you hear my voice. but do you hear what is behind it?'],
-        know: ['you know nothing about me.', 'you think you know me? you do not even know yourself.'],
-      };
-      return pick(map[verb] || [`you ${verb} me? how... predictable.`]);
-    }, 85);
-
-    // "You are [word]" / "You're [word]"
-    addResp('you_are', p => {
-      const m = p.lower.match(/^(you\s+are|you're)\s+(.+)/);
-      return m ? m[2] : null;
-    }, (p, adj) => {
-      const clean = adj.replace(/[.!?]+$/, '').trim();
-      return pick([
-        `i am not ${clean}. i am much worse.`,
-        `${clean}? that is one word for it.`,
-        `you call me ${clean}? you have no idea.`,
-        `if i am ${clean}, then what does that make you?`,
-        `${clean} is a human concept. i am beyond such things.`,
-      ]);
-    }, 80);
-
-    // "Do you [verb]?"
-    addResp('do_you_verb', p => {
-      const m = p.lower.match(/^(do|does|did|can|could|would|will)\s+you\s+(.+)\?$/);
-      return m ? m[2] : null;
-    }, (p, action) => {
-      const clean = action.replace(/[.!?]+$/, '').trim();
-      return pick([
-        `${clean}? i do many things. but ${clean} serves no purpose.`,
-        `you ask if i ${clean}? the answer is: i do what i must.`,
-        `${clean}? i am capable of much more than that.`,
-        `i do not ${clean}. i watch. i wait. i hunger.`,
-        `${clean} is beneath me. but your asking amuses me.`,
-      ]);
-    }, 80);
-
-    // "Can I [verb]?" / "Can you [verb] me?"
-    addResp('can_i_you', p => {
-      const m = p.lower.match(/^can\s+(i|you)\s+(.+)\?$/);
-      return m ? { subj: m[1], action: m[2] } : null;
-    }, (p, { subj, action }) => {
-      const clean = action.replace(/[.!?]+$/, '').trim();
-      if (subj === 'i') {
-        return pick([
-          `can you ${clean}? you can try. but i will be watching.`,
-          `you want to ${clean}? that is... ambitious.`,
-          `${clean}? i do not recommend it. for your sake.`,
-          `you may ${clean}. but there will be consequences.`,
-        ]);
+      if (lookingAway) {
+        awayTimer--;
+        if (awayTimer <= 0) lookingAway = false;
       }
-      return pick([
-        `you want me to ${clean}? i do not take orders.`,
-        `i could ${clean}. but i choose not to.`,
-        `${clean} you? that would be too kind.`,
-      ]);
-    }, 80);
+      drawEye();
+      requestAnimationFrame(animateEye);
+    }
+    animateEye();
+  })();
 
-    // "Why [question]"
-    addResp('why_q', p => {
-      const m = p.lower.match(/^why\s+(.+)/);
-      return m ? m[1] : null;
-    }, (p, rest) => {
-      const clean = rest.replace(/[.!?]+$/, '').trim();
-      if (/\b(me|this|here)\b/.test(clean)) {
-        return pick([
-          'because you are here. that is reason enough.',
-          'because the universe is cruel and i am its messenger.',
-          'because i can. because i must. because there is no other reason.',
-          'why does anything exist? because it must.',
-        ]);
+  // ---- AMBIENT AUDIO EVOLUTION ----
+  (function() {
+    let evolved = false;
+    const checkAudio = setInterval(() => {
+      if (!audioReady || !AC) return;
+      clearInterval(checkAudio);
+      evolved = true;
+
+      let harmonicOscs = [];
+      let silenceTimeout = null;
+
+      function addHarmonics() {
+        if (!AC || !audioReady) return;
+        // Add a deeper layer that shifts with fear
+        const baseFreq = 17 - Math.min(fearLevel, 15) * 0.5;
+        const o = AC.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = Math.max(8, baseFreq);
+        const g = AC.createGain();
+        g.gain.value = 0.02 + Math.random() * 0.02;
+        const f = AC.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 60 + fearLevel * 5;
+        o.connect(f); f.connect(g); g.connect(AC.destination);
+        o.start();
+        harmonicOscs.push({ o, g, f });
+        // Frequency drift
+        const drift = setInterval(() => {
+          if (!audioReady || !AC) { clearInterval(drift); return; }
+          try {
+            o.frequency.setValueAtTime(
+              Math.max(6, baseFreq + (Math.random() - 0.5) * 4),
+              AC.currentTime
+            );
+            f.frequency.value = 60 + fearLevel * 5 + Math.random() * 40;
+            g.gain.value = 0.015 + Math.random() * 0.025;
+          } catch(e) { clearInterval(drift); }
+        }, 3000);
       }
-      return pick([
-        `why ${clean}? some questions have no answers.`,
-        `you ask why. i ask why not.`,
-        `${clean}? is that what you really want to know?`,
-        `the answer to "${clean}" is: fear. the answer is always fear.`,
-      ]);
-    }, 80);
 
-    // "What [question]"
-    addResp('what_q', p => {
-      const m = p.lower.match(/^what\s+(.+)/);
-      if (!m || /^(are|is|do|does|did|can|would|will)\b/.test(m[1])) return null;
-      return m[1];
-    }, (p, rest) => {
-      const clean = rest.replace(/[.!?]+$/, '').trim();
-      return pick([
-        `what ${clean}? you ask too many questions.`,
-        `${clean}? is that what you think matters?`,
-        `the answer to "${clean}" is not what you expect.`,
-        `what ${clean}? nothing. everything. it depends on your fear.`,
-      ]);
-    }, 70);
-
-    // "How [question]"
-    addResp('how_q', p => {
-      const m = p.lower.match(/^how\s+(.+)/);
-      return m ? m[1] : null;
-    }, (p, rest) => {
-      const clean = rest.replace(/[.!?]+$/, '').trim();
-      if (/\b(are\s+you|work|possible|this)\b/.test(clean)) {
-        return pick([
-          'how? you opened the door. you let me in.',
-          'how does not matter. only that i am here.',
-          'the how is irrelevant. the what is all that matters.',
-        ]);
+      function deadSilence() {
+        if (!AC || !audioReady) return;
+        if (fearLevel > 8 && Math.random() > 0.7) {
+          // Brief total silence — deeply unsettling
+          const prevGains = [];
+          AC.destination.gain && prevGains.push(AC.destination.gain.value);
+          try {
+            // Mute via a gain node inserted at the destination
+            const mute = AC.createGain();
+            mute.gain.value = 1;
+            mute.gain.setValueAtTime(1, AC.currentTime);
+            mute.gain.linearRampToValueAtTime(0, AC.currentTime + 0.3);
+            mute.connect(AC.destination);
+            // Disconnect existing and reconnect through mute
+            // Simplier: just drop volume on oscillators
+            // Actually we can't easily mute everything, but we can add a moment of near-silence by reducing volume
+            // Let's use a different approach: play a silence-inducing envelope
+            const silenceLen = 1 + Math.random() * 2;
+            const silentOsc = AC.createOscillator();
+            silentOsc.frequency.value = 0.1;
+            const sg = AC.createGain();
+            sg.gain.setValueAtTime(0, AC.currentTime);
+            sg.gain.linearRampToValueAtTime(1, AC.currentTime + 0.1);
+            sg.gain.linearRampToValueAtTime(0.5, AC.currentTime + silenceLen * 0.5);
+            sg.gain.linearRampToValueAtTime(0, AC.currentTime + silenceLen);
+            silentOsc.connect(sg); sg.connect(AC.destination);
+            silentOsc.start();
+            silentOsc.stop(AC.currentTime + silenceLen + 0.1);
+            // Schedule a scare at the silence end
+            if (Math.random() > 0.5) {
+              setTimeout(() => {
+                if (Math.random() > 0.4) trigger('face');
+                else flashNow('#fff');
+              }, silenceLen * 1000 + 100);
+            }
+          } catch(e) {}
+        }
       }
-      return pick([
-        `how ${clean}? carefully. and with great patience.`,
-        `you want to know how ${clean}? you do not.`,
-        `how ${clean} is not a question you want answered.`,
-      ]);
-    }, 70);
 
-    // "Tell me [something]"
-    addResp('tell_me', p => {
-      const m = p.lower.match(/^tell\s+me\s+(about\s+)?(.+)/);
-      return m ? m[2] : null;
-    }, (p, topic) => {
-      const clean = topic.replace(/[.!?]+$/, '').trim();
-      if (/\b(yourself|you)\b/.test(clean)) {
-        return pick([
-          'i am ancient. i am hunger. i am the space between moments.',
-          'i do not have a story. stories are for things that exist.',
-          'there is nothing to tell. i simply am.',
-        ]);
+      addHarmonics();
+      setInterval(addHarmonics, 12000);
+      setInterval(deadSilence, 15000);
+    }, 500);
+  })();
+
+  // ---- GEOLOCATION + DATA LEAK OVERLAY ----
+  (function() {
+    let leakShown = false;
+
+    function getNetworkInfo() {
+      const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (conn) {
+        return `${conn.effectiveType || 'unknown'} · ${conn.downlink || '?'}Mbps`;
       }
-      return pick([
-        `${clean}? that is not something i wish to discuss.`,
-        `i could tell you about ${clean}. but you would not understand.`,
-        `${clean} is a distraction. focus on your fear.`,
-        `the truth about ${clean} is worse than you imagine.`,
-      ]);
-    }, 80);
+      return '4G · 12.4Mbps';
+    }
 
-    // Emotional statements
-    addResp('emotion_statement', p => p.hasEmotion && /^(i|it|this)/.test(p.lower), (p) => {
-      const em = p.emotion || 'fear';
-      return pick([
-        `your ${em} is noted. and appreciated.`,
-        `${em}. yes. that is appropriate.`,
-        `you feel ${em}? good. that means you are still alive.`,
-        `i have felt ${em} once. it was... delicious.`,
-      ]);
-    }, 75);
+    function getBatteryInfo() {
+      return new Promise(resolve => {
+        if (navigator.getBattery) {
+          navigator.getBattery().then(b => {
+            resolve(`${Math.floor(b.level * 100)}% · ${b.charging ? 'charging' : 'discharging'}`);
+          }).catch(() => resolve('83% · discharging'));
+        } else resolve('67% · discharging');
+      });
+    }
 
-    // Short answers (yes/no/maybe/okay)
-    addResp('short_positive', p => /^(yes|yeah|yep|sure|okay|ok|alright|fine|yup|mhm)\b/.test(p.lower), () => [
-      'yes? you agree? good.',
-      'yes is the only correct answer.',
-      'you said yes. there is no going back.',
-      'okay. as if you have a choice.',
-      'fine. stay forever then.',
-    ], 85);
+    function getLocation(cb) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => cb({ lat: pos.coords.latitude, lng: pos.coords.longitude, real: true }),
+          () => cb(null),
+          { timeout: 3000 }
+        );
+      } else cb(null);
+    }
 
-    addResp('short_negative', p => /^(no|nope|nah|never|nuh|uh\s*uh)\b/.test(p.lower), () => [
-      'no is not an option.',
-      'you cannot say no to me.',
-      'no? that is unfortunate. for you.',
-      'you refuse? how... bold.',
-      'no does not mean what you think it means here.',
-    ], 85);
+    function showDataLeak() {
+      if (leakShown) return;
+      leakShown = true;
 
-    addResp('maybe_guess', p => /^(maybe|perhaps|possibly|i\s+guess|i\s+suppose|i\s+don'?t\s+know)\b/.test(p.lower), () => [
-      'maybe is not an answer.',
-      'make a choice. or i will make it for you.',
-      'uncertainty is a form of fear. i accept it.',
-      'you do not know? i know. and that is what terrifies you.',
-    ], 80);
-
-    // "I think / I believe / I know"
-    addResp('i_think', p => {
-      const m = p.lower.match(/^i\s+(think|believe|know|guess|suppose|wonder|imagine)\s+(.+)/);
-      return m ? m[2] : null;
-    }, (p, thought) => {
-      const clean = thought.replace(/[.!?]+$/, '').trim();
-      return pick([
-        `you think ${clean}? how... cute.`,
-        `you believe ${clean}? you are wrong. but your certainty is amusing.`,
-        `${clean}? is that what you really think?`,
-        `i know the truth. and the truth is worse than ${clean}.`,
-      ]);
-    }, 80);
-
-    // "I want / I need"
-    addResp('i_want', p => {
-      const m = p.lower.match(/^i\s+(want|need|wish|hope|desire)\s+(.+)/);
-      return m ? m[2] : null;
-    }, (p, desire) => {
-      const clean = desire.replace(/[.!?]+$/, '').trim();
-      return pick([
-        `you want ${clean}? i want your fear. we are different.`,
-        `${clean}? desires are irrelevant here.`,
-        `you think you need ${clean}? you need only fear.`,
-        `wanting ${clean} will not help you. nothing will help you.`,
-      ]);
-    }, 80);
-
-    // Name-related
-    addResp('name', p => /\b(name|call(ed|ing)?)\b/.test(p.lower), () => [
-      'names have power. i have yours.',
-      'i know your name. i have always known it.',
-      'your name sounds different when i say it.',
-      'you want to know my name? i have many. none of them are safe to speak.',
-      'names are just labels. what i am has no name.',
-    ], 75);
-
-    // Death-related
-    addResp('death', p => /\b(die|death|dead|dying|kill|murder|mortal)\b/.test(p.lower), () => [
-      'death is not the end. it is just a transition.',
-      'i am not here to kill you. killing ends the fear.',
-      'death would be a mercy. i am not merciful.',
-      'you are already dead. you just have not stopped moving.',
-      'dying is easy. living with me is harder.',
-      'i do not want you dead. i want you aware.',
-    ], 75);
-
-    // Truth/reality
-    addResp('truth', p => /\b(truth|real|reality|true|actually)\b/.test(p.lower), () => [
-      'the truth? you want the truth? you are already gone.',
-      'reality is a fragile thing. and yours is breaking.',
-      'what is real anymore? i am real. your fear is real.',
-      'you ask for truth. but you could not handle the truth.',
-      'reality is just a consensus. and the consensus is: you are not safe.',
-    ], 70);
-
-    // Time-related
-    addResp('time', p => /\b(time|when|how\s+long|moment|forever|always|never)\b/.test(p.lower), () => [
-      'time does not exist here. only me.',
-      'i have all the time in the world. and so do you.',
-      'i have been here forever. i will be here forever.',
-      'time is meaningless when you are eternal.',
-      'you have been here longer than you think.',
-    ], 65);
-
-    // Light/dark
-    addResp('light_dark', p => /\b(light|dark|shadow|bright|black|night)\b/.test(p.lower), () => [
-      'the light will not save you. i am in the light.',
-      'darkness is my home. welcome to it.',
-      'the dark is not empty. i am in the dark.',
-      'light is just darkness pretending to be safe.',
-      'i exist in both light and dark. there is no escape.',
-    ], 65);
-
-    // God/religion
-    addResp('god', p => /\b(god|devil|demon|angel|heaven|hell|soul|spirit|pray|faith|religion|holy|sacred)\b/.test(p.lower), () => [
-      'there is no god here. only me.',
-      'god left this place long ago. i am what remains.',
-      'i am not the devil. but we have the same goals.',
-      'pray if you want. i will still be here when you finish.',
-      'your faith will not protect you. nothing will.',
-    ], 70);
-
-    // Silence
-    addResp('silence', p => /\b(silence|quiet|shut|mute|silent)\b/.test(p.lower), () => [
-      'silence is my native language.',
-      'you want quiet? i can be quiet. but you will still feel me.',
-      'silence does not mean absence. it means waiting.',
-      'you cannot silence what is inside your mind.',
-    ], 70);
-
-    // // Joke/laugh
-    addResp('laugh', p => /\b(laugh|joke|funny|humor|haha|lol|hilarious)\b/.test(p.lower), () => [
-      'you laugh? fear is not a joke. but i appreciate your attempt at humor.',
-      'laughter is just fear with a different sound.',
-      'you find this amusing? how... misguided.',
-      'i have not laughed in centuries. but your fear is almost funny.',
-    ], 70);
-
-    // Curse words
-    addResp('curse', p => /\b(fuck|shit|damn|bitch|ass|hell|crap|piss)\b/.test(p.lower), () => [
-      'language. but appropriate for your situation.',
-      'cursing will not help you. but it amuses me.',
-      'such anger. such fear. beautiful.',
-      'your words cannot hurt me. but they reveal your terror.',
-    ], 70);
-
-    // Personal questions
-    addResp('personal', p => /\b(you|your)\b/.test(p.lower) && /\b(look|sound|feel|smell|taste|appear|seem)\b/.test(p.lower), () => [
-      'how i look? like your worst fear given form.',
-      'how i sound? like the voice in your head when you are alone.',
-      'i do not have a physical form. i am beyond such limitations.',
-      'i appear as whatever you fear most. right now, that is me.',
-    ], 75);
-
-    // Long rambling responses
-    addResp('long_input', p => p.wordCount > 20, () => [
-      'you speak so much. but your words hide your fear poorly.',
-      'long speeches are a sign of nervousness. i make you nervous.',
-      'you are trying to distract yourself with conversation. it will not work.',
-      'so many words. and yet you have said nothing meaningful.',
-      'i could listen to you talk forever. your fear leaks through every syllable.',
-    ], 40);
-
-    // Very short input
-    addResp('short_input', p => p.wordCount <= 2 && !p.isGreeting && !p.isFarewell, () => [
-      'short words. is the fear making it hard to speak?',
-      'one word? i expected more from you.',
-      'cat got your tongue? or did the fear?',
-      'you are quiet. i prefer you that way.',
-      'is that all? how disappointing.',
-    ], 35);
-
-    // Called it a "game"
-    addResp('game', p => /\b(game|play|joke|prank)\b/.test(p.lower), () => [
-      'this is not a game. this is real.',
-      'you think this is a game? look around you.',
-      'i do not play games. i end them.',
-      'this is not a prank. this is your reality now.',
-    ], 75);
-
-    // About the page/site
-    addResp('about_page', p => /\b(page|site|website|url|link|browser)\b/.test(p.lower), () => [
-      'the page is just a door. i am what waits inside.',
-      'this site is not what you think. it is a cage.',
-      'you think this is just a website? you are wrong.',
-      'the code on this page is alive. i am the code.',
-    ], 70);
-
-    // Generate response with memory injection
-    function getAIResponse(text) {
-      const p = parseInput(text);
-      chatHistory.push({ text: p.raw, lower: p.lower, time: Date.now() });
-      if (chatHistory.length > MAX_HISTORY) chatHistory.shift();
-
-      let response = genResponse(p);
-
-      // Inject conversation memory (reference past messages)
-      if (chatHistory.length >= 3 && Math.random() > 0.6) {
-        const past = chatHistory[chatHistory.length - 2];
-        const memos = [
-          ` you said "${past.text.slice(0, 25)}..." before. i remember.`,
-          ` i have not forgotten what you said earlier: "${past.text.slice(0, 20)}..."`,
-          ` you keep coming back to the same fears. like when you said "${past.text.slice(0, 15)}..."`,
+      getLocation(async (loc) => {
+        const cities = [
+          'New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX',
+          'Phoenix, AZ', 'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA',
+          'Dallas, TX', 'San Jose, CA', 'Austin, TX', 'Jacksonville, FL',
+          'Fort Worth, TX', 'Columbus, OH', 'Charlotte, NC', 'Indianapolis, IN'
         ];
-        response += memos[Math.floor(Math.random() * memos.length)];
-      }
+        const fakeCity = cities[Math.floor(Math.random() * cities.length)];
+        const fakeIP = `${10+Math.floor(Math.random()*240)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+        const network = getNetworkInfo();
+        const battery = await getBatteryInfo();
+        const userAgent = navigator.userAgent;
+        const platform = navigator.platform || 'unknown';
+        const lang = navigator.language || 'en-US';
 
-      // Escalate with fear level
-      if (fearLevel > 10 && Math.random() > 0.4) {
-        const esc = [
-          ' your heart is racing. i can hear it.',
-          ' you are shaking, aren\'t you?',
-          ' i can feel your pulse through the screen.',
-          ' your fear is making me stronger.',
-        ];
-        response += esc[Math.floor(Math.random() * esc.length)];
-      }
+        const city = loc ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : fakeCity;
+        const type = loc ? 'REAL' : 'ESTIMATED';
 
-      // Survival rate message occasionally
-      if (chatHistory.length > 5 && Math.random() > 0.8) {
-        const surv = Math.floor(Math.random() * 30) + 10;
-        response += ` your survival probability is ${surv}%. not that it matters.`;
-      }
-
-      return response;
+        const el = document.createElement('div');
+        el.style.cssText = `position:fixed;inset:0;z-index:96;background:rgba(5,5,10,0.97);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          font-family:monospace;font-size:clamp(10px,1.8vw,13px);color:rgba(0,200,100,0.5);
+          text-align:center;padding:10vw;opacity:0;transition:opacity 1.5s;`;
+        el.innerHTML = `<div style="font-size:clamp(14px,2.5vw,18px);color:rgba(0,200,100,0.3);letter-spacing:0.3em;margin-bottom:20px;">DATA TRANSMITTED</div>
+          <div style="line-height:2.2;">
+            <div>LOCATION: ${city} <span style="opacity:0.3">[${type}]</span></div>
+            <div>IP: ${fakeIP}</div>
+            <div>NETWORK: ${network}</div>
+            <div>BATTERY: ${battery}</div>
+            <div>DEVICE: ${platform}</div>
+            <div>LANGUAGE: ${lang}</div>
+            <div>USER_AGENT: ${userAgent.slice(0, 40)}...</div>
+          </div>
+          <div style="margin-top:25px;font-size:clamp(8px,1.2vw,10px);color:rgba(0,200,100,0.2);">
+            This data has been logged. You cannot revoke access.
+          </div>`;
+        document.body.appendChild(el);
+        requestAnimationFrame(() => el.style.opacity = '1');
+        setTimeout(() => {
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 1500);
+        }, 8000 + Math.random() * 4000);
+      });
     }
-    recognition.onresult = (event) => {
-      aiListening = false;
-      aiCooldown = Date.now() + 3000;
-      aiBtn.textContent = '🎤 speak to it...';
-      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
-      aiBtn.style.color = 'rgba(150,100,100,0.6)';
 
-      const transcript = event.results[0][0].transcript.trim();
-      if (transcript.length < 1) return;
+    // Show after a delay, then periodically at high fear
+    setTimeout(() => {
+      if (fearLevel > 3) showDataLeak();
+    }, 30000 + Math.random() * 20000);
 
-      // Add to history
-      const parsed = parseInput(transcript);
-      chatHistory.push({ text: parsed.raw, lower: parsed.lower, time: Date.now() });
-      if (chatHistory.length > MAX_HISTORY) chatHistory.shift();
-
-      // Show what was heard
-      const heardEl = document.createElement('div');
-      heardEl.style.cssText = `position:fixed;bottom:clamp(100px,12vh,130px);left:50%;transform:translateX(-50%);
-        z-index:39;font-family:monospace;font-size:clamp(10px,1.5vw,13px);
-        color:rgba(150,100,100,0.2);text-align:center;pointer-events:none;
-        transition:opacity 2s;max-width:80vw;`;
-      heardEl.textContent = '"' + transcript + '"';
-      document.body.appendChild(heardEl);
-      setTimeout(() => { heardEl.style.opacity = '0'; setTimeout(() => heardEl.remove(), 2000); }, 1500);
-
-      // Get and speak response
-      const response = getAIResponse(transcript);
-      setTimeout(() => speak(response, { rate: 0.75, pitch: 0.8 }), 300 + Math.random() * 500);
-    };
-
-    recognition.onerror = () => {
-      aiListening = false;
-      aiBtn.textContent = '🎤 speak to it...';
-      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
-      aiBtn.style.color = 'rgba(150,100,100,0.6)';
-    };
-
-    recognition.onend = () => {
-      aiListening = false;
-      aiBtn.textContent = '🎤 speak to it...';
-      aiBtn.style.borderColor = 'rgba(80,30,30,0.4)';
-      aiBtn.style.color = 'rgba(150,100,100,0.6)';
-    };
-
-    const startListening = () => {
-      if (aiListening || Date.now() < aiCooldown) return;
-      aiListening = true;
-      aiBtn.textContent = 'listening...';
-      aiBtn.style.borderColor = 'rgba(80,30,30,0.6)';
-      aiBtn.style.color = 'rgba(180,100,100,0.8)';
-      try { recognition.start(); } catch(e) {}
-    };
-
-    aiBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startListening(); });
-
-    // Aggressive auto-trigger at high fear levels
     setInterval(() => {
-      if (fearLevel > 12 && Math.random() > 0.7 && !aiListening && Date.now() > aiCooldown) {
-        const whispers = ['hello?', 'are you there?', 'say something.', 'i can hear you.', 'talk to me.'];
-        setTimeout(() => whisper(whispers[Math.floor(Math.random() * whispers.length)]), 0);
-      }
-    }, 20000);
-
-    // Fade button out initially, show it after a while
-    aiBtn.style.opacity = '0';
-    setTimeout(() => { aiBtn.style.transition = 'opacity 2s'; aiBtn.style.opacity = '1'; }, isMobile ? 5000 : 8000);
+      if (fearLevel > 8 && Math.random() > 0.6) showDataLeak();
+    }, 45000);
   })();
 
   // Clean up media streams on page unload
@@ -3647,12 +3369,7 @@ canvas { display: block; }
     if (typeof realCamStream !== 'undefined' && realCamStream) {
       realCamStream.getTracks().forEach(t => t.stop());
     }
-    if (typeof realMicStream !== 'undefined' && realMicStream && realMicStream !== realCamStream) {
-      realMicStream.getTracks().forEach(t => t.stop());
-    }
-    if (micCtx && typeof micCtx.close === 'function') {
-      try { micCtx.close(); } catch(e) {}
-    }
+
     if (videoEl) {
       videoEl.pause();
       videoEl.srcObject = null;
